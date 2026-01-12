@@ -11,99 +11,240 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // daftar user awal
+        $now = now();
+
         $users = [
+
+            // ======================
+            // ADMIN
+            // ======================
             [
-                'name'         => 'Admin',
-                'email'        => 'admin@esurat.test',
-                'password'     => 'admin123',
-                'nip'          => '198000000001',
-                'unit_kode'    => 'TU',                    // Unit Tata Usaha
-                'jabatan_nama' => 'Staf TU',               // dari tabel jabatans
-                'role'         => 'admin',
+                'name' => 'Admin Sistem',
+                'email' => 'admin@esurat.test',
+                'password' => 'admin123',
+                'nip' => '198000000001',
+                'unit_kode' => null,
+                'jabatan_nama' => 'Admin Sistem',
+                'role' => 'admin',
+                'status' => 'aktif',
+                'ttd_path' => null, // admin tidak ttd
             ],
-            /*[
-                'name'         => 'Ketua Jurusan TI',
-                'email'        => 'kajur@esurat.test',
-                'password'     => 'kajur123',
-                'nip'          => '198000000002',
-                'unit_kode'    => 'JTI',
-                'jabatan_nama' => 'Ketua Jurusan',
-                'role'         => 'pimpinan_unit',
-            ],*/
+
+            /* ======================
+             * PEMBUAT SURAT UNIT
+             * ====================== */
             [
-                'name'         => 'Direktur',
-                'email'        => 'direktur@esurat.test',
-                'password'     => 'direktur123',
-                'nip'          => '198000000003',
-                'unit_kode'    => 'DIR',
+                'name' => 'Pembuat Surat Keuangan',
+                'email' => 'pembuat.keu@esurat.test',
+                'password' => 'pembuat123',
+                'nip' => '198000000015',
+                'unit_kode' => 'KEU',
+                'jabatan_nama' => 'Staf Unit Keuangan',
+                'role' => 'pembuat_surat',
+                'status' => 'aktif',
+                'ttd_path' => null,
+            ],
+            [
+                'name' => 'Pembuat Surat Akademik',
+                'email' => 'pembuat.akademik@esurat.test',
+                'password' => 'pembuat123',
+                'nip' => '198000000016',
+                'unit_kode' => 'AKD',
+                'jabatan_nama' => 'Staf Unit Akademik',
+                'role' => 'pembuat_surat',
+                'status' => 'aktif',
+                'ttd_path' => null,
+            ],
+            [
+                'name' => 'Pembuat Surat Perpustakaan',
+                'email' => 'pembuat.perpus@esurat.test',
+                'password' => 'pembuat123',
+                'nip' => '198000000017',
+                'unit_kode' => 'PERPUS',
+                'jabatan_nama' => 'Staf Unit Perpustakaan',
+                'role' => 'pembuat_surat',
+                'status' => 'aktif',
+                'ttd_path' => null,
+            ],
+
+            /* ======================
+             * PEMBUAT SURAT JURUSAN
+             * ====================== */
+            [
+                'name' => 'Pembuat Surat TI',
+                'email' => 'pembuat.ti@esurat.test',
+                'password' => 'pembuat123',
+                'nip' => '198000000010',
+                'unit_kode' => 'JTI',
+                'jabatan_nama' => 'Staf Jurusan Teknik Informatika',
+                'role' => 'pembuat_surat',
+                'status' => 'aktif',
+                'ttd_path' => null,
+            ],
+            [
+                'name' => 'Pembuat Surat Mesin',
+                'email' => 'pembuat.mesin@esurat.test',
+                'password' => 'pembuat123',
+                'nip' => '198000000011',
+                'unit_kode' => 'JTM',
+                'jabatan_nama' => 'Staf Jurusan Teknik Mesin',
+                'role' => 'pembuat_surat',
+                'status' => 'aktif',
+                'ttd_path' => null,
+            ],
+            [
+                'name' => 'Pembuat Surat Elektro',
+                'email' => 'pembuat.elektro@esurat.test',
+                'password' => 'pembuat123',
+                'nip' => '198000000012',
+                'unit_kode' => 'JTE',
+                'jabatan_nama' => 'Staf Jurusan Teknik Elektro',
+                'role' => 'pembuat_surat',
+                'status' => 'aktif',
+                'ttd_path' => null,
+            ],
+
+            /* ======================
+             * KETUA JURUSAN (VERIFIKATOR)
+             * ====================== */
+            [
+                'name' => 'Ketua Jurusan TI',
+                'email' => 'kajur.ti@esurat.test',
+                'password' => 'kajur123',
+                'nip' => '198000000004',
+                'unit_kode' => 'JTI',
+                'jabatan_nama' => 'Ketua Jurusan Teknik Informatika',
+                'role' => 'verifikator',
+                'status' => 'aktif',
+                'ttd_path' => 'ttd/kajur_ti.png',
+            ],
+            [
+                'name' => 'Ketua Jurusan Mesin',
+                'email' => 'kajur.mesin@esurat.test',
+                'password' => 'kajur123',
+                'nip' => '198000000013',
+                'unit_kode' => 'JTM',
+                'jabatan_nama' => 'Ketua Jurusan Teknik Mesin',
+                'role' => 'verifikator',
+                'status' => 'aktif',
+                'ttd_path' => 'ttd/kajur_mesin.png',
+            ],
+            [
+                'name' => 'Ketua Jurusan Elektro',
+                'email' => 'kajur.elektro@esurat.test',
+                'password' => 'kajur123',
+                'nip' => '198000000014',
+                'unit_kode' => 'JTE',
+                'jabatan_nama' => 'Ketua Jurusan Teknik Elektro',
+                'role' => 'verifikator',
+                'status' => 'aktif',
+                'ttd_path' => 'ttd/kajur_elektro.png',
+            ],
+
+            /* ======================
+             * SEKRETARIS DIREKTUR
+             * ====================== */
+            [
+                'name' => 'Sekretaris Direktur',
+                'email' => 'sekdir@esurat.test',
+                'password' => 'sekdir123',
+                'nip' => '198000000018',
+                'unit_kode' => 'DIR',
+                'jabatan_nama' => 'Sekretaris Direktur',
+                'role' => 'sekretaris_direktur',
+                'status' => 'aktif',
+                'ttd_path' => 'ttd/sekdir.png',
+            ],
+
+            /* ======================
+             * PIMPINAN (TTD WAJIB)
+             * ====================== */
+            [
+                'name' => 'Direktur Politeknik',
+                'email' => 'direktur@esurat.test',
+                'password' => 'direktur123',
+                'nip' => '198000000006',
+                'unit_kode' => 'DIR',
                 'jabatan_nama' => 'Direktur',
-                'role'         => 'pimpinan',
+                'role' => 'pimpinan',
+                'status' => 'aktif',
+                'ttd_path' => 'ttd/direktur.png',
             ],
             [
-                'name'         => 'Verifikator Jurusan',
-                'email'        => 'verifikator@esurat.test',
-                'password'     => 'verif123',
-                'nip'          => '198000000004',
-                'unit_kode'    => 'JTI',
-                'jabatan_nama' => 'Ketua Jurusan', // misal Ketua Jurusan merangkap verifikator
-                'role'         => 'verifikator',
+                'name' => 'Wakil Direktur I',
+                'email' => 'wadir1@esurat.test',
+                'password' => 'wadir123',
+                'nip' => '198000000007',
+                'unit_kode' => 'DIR',
+                'jabatan_nama' => 'Wakil Direktur I',
+                'role' => 'pimpinan',
+                'status' => 'aktif',
+                'ttd_path' => 'ttd/wadir1.png',
             ],
             [
-                'name'         => 'Sekretaris Jurusan TI',
-                'email'        => 'sekjur@esurat.test',
-                'password'     => 'sekjur123',
-                'nip'          => '198000000005',
-                'unit_kode'    => 'JTI',
-                'jabatan_nama' => 'Sekretaris Jurusan',
-                'role'         => 'sekretaris_unit',
+                'name' => 'Wakil Direktur II',
+                'email' => 'wadir2@esurat.test',
+                'password' => 'wadir123',
+                'nip' => '198000000008',
+                'unit_kode' => 'DIR',
+                'jabatan_nama' => 'Wakil Direktur II',
+                'role' => 'pimpinan',
+                'status' => 'aktif',
+                'ttd_path' => 'ttd/wadir2.png',
             ],
             [
-                'name'         => 'Pembuat Surat',
-                'email'        => 'pembuat@esurat.test',
-                'password'     => 'pembuat123',
-                'nip'          => '198000000006',
-                'unit_kode'    => 'TU',
-                'jabatan_nama' => 'Staf TU',
-                'role'         => 'pembuat_surat',
+                'name' => 'Wakil Direktur III',
+                'email' => 'wadir3@esurat.test',
+                'password' => 'wadir123',
+                'nip' => '198000000009',
+                'unit_kode' => 'DIR',
+                'jabatan_nama' => 'Wakil Direktur III',
+                'role' => 'pimpinan',
+                'status' => 'aktif',
+                'ttd_path' => 'ttd/wadir3.png',
+            ],
+
+            /* ======================
+             * CONTOH USER NONAKTIF (TEST RULE)
+             * ====================== */
+            [
+                'name' => 'Direktur Lama',
+                'email' => 'direktur.lama@esurat.test',
+                'password' => 'direktur123',
+                'nip' => '197900000001',
+                'unit_kode' => 'DIR',
+                'jabatan_nama' => 'Direktur',
+                'role' => 'pimpinan',
+                'status' => 'nonaktif',
+                'ttd_path' => 'ttd/direktur_lama.png',
             ],
         ];
 
         foreach ($users as $data) {
 
-            // cari unit_id berdasarkan kode_unit
-            $unitId = null;
-            if (!empty($data['unit_kode'])) {
-                $unitId = DB::table('units')
-                    ->where('kode_unit', $data['unit_kode'])
-                    ->value('id');
-            }
+            $unitId = $data['unit_kode']
+                ? DB::table('units')->where('kode_unit', $data['unit_kode'])->value('id')
+                : null;
 
-            // cari jabatan_id berdasarkan nama_jabatan
-            $jabatanId = null;
-            if (!empty($data['jabatan_nama'])) {
-                $jabatanId = DB::table('jabatans')
-                    ->where('nama_jabatan', $data['jabatan_nama'])
-                    ->value('id');
-            }
+            $jabatanId = DB::table('jabatans')
+                ->where('nama_jabatan', $data['jabatan_nama'])
+                ->value('id');
 
-            // buat user (tanpa phone & position)
-            $user = User::firstOrCreate(
+            $user = User::updateOrCreate(
                 ['email' => $data['email']],
                 [
-                    'name'       => $data['name'],
-                    'password'   => Hash::make($data['password']),
-                    'nip'        => $data['nip'] ?? null,
-                    'unit_id'    => $unitId,
-                    'jabatan_id' => $jabatanId,
-                    'status'     => 'aktif',
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'name'              => $data['name'],
+                    'password'          => Hash::make($data['password']),
+                    'nip'               => $data['nip'],
+                    'unit_id'           => $unitId,
+                    'jabatan_id'        => $jabatanId,
+                    'status'            => $data['status'],
+                    'ttd_path'          => $data['ttd_path'],
+                    'email_verified_at' => $now,
                 ]
             );
 
-            // assign role
-            if (!empty($data['role']) && !$user->hasRole($data['role'])) {
+            if (!$user->hasRole($data['role'])) {
                 $user->assignRole($data['role']);
             }
         }

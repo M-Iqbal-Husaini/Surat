@@ -2,65 +2,77 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Laravel\Fortify\TwoFactorAuthenticatable;
-use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles; 
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasApiTokens;
-    use HasFactory;
-    use HasProfilePhoto;
-    use Notifiable;
-    use TwoFactorAuthenticatable;
-    use HasRoles; 
+    use HasApiTokens, Notifiable, HasRoles;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
+        'nip',
+        'unit_id',
+        'jabatan_id',
+        'status',
+        'ttd_path',              // ✅ PENTING
+        'email_verified_at',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
-        'two_factor_recovery_codes',
-        'two_factor_secret',
     ];
 
-    /**
-     * The accessors to append to the model's array form.
-     *
-     * @var array<int, string>
-     */
-    protected $appends = [
-        'profile_photo_url',
+    protected $casts = [
+        'email_verified_at' => 'datetime',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    /* =================
+     | RELATION
+     ================= */
+
+    public function unit()
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->belongsTo(Unit::class);
+    }
+
+    public function jabatan()
+    {
+        return $this->belongsTo(Jabatan::class);
+    }
+
+    public function suratDibuat()
+    {
+        return $this->hasMany(Surat::class, 'pembuat_id');
+    }
+
+    /* =================
+     | SCOPE
+     ================= */
+
+    public function scopeAktif($query)
+    {
+        return $query->where('status', 'aktif');
+    }
+
+    /* =================
+     | HELPER
+     ================= */
+
+    public function hasTtd(): bool
+    {
+        return !empty($this->ttd_path);
+    }
+
+    public function getTtdUrlAttribute(): ?string
+    {
+        return $this->ttd_path
+            ? asset('storage/' . $this->ttd_path)
+            : null;
     }
 }

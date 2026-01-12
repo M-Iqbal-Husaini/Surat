@@ -3,16 +3,61 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Unit extends Model
 {
-    use HasFactory;
+    protected $fillable = [
+        'nama_unit',
+        'kode_unit',
+        'jenis_unit',
+        'parent_id',
+    ];
 
-    protected $guarded = ['id'];
+    /* =================
+     | RELATION
+     ================= */
+
+    public function parent()
+    {
+        return $this->belongsTo(Unit::class, 'parent_id');
+    }
+
+    public function children()
+    {
+        return $this->hasMany(Unit::class, 'parent_id');
+    }
 
     public function users()
     {
         return $this->hasMany(User::class);
+    }
+
+    public function jabatans()
+    {
+        return $this->hasMany(Jabatan::class);
+    }
+
+    /* =================
+     | SCOPE
+     ================= */
+
+    public function scopeRoot($query)
+    {
+        return $query->whereNull('parent_id');
+    }
+
+    public function scopeJurusan($query)
+    {
+        return $query->where('jenis_unit', 'jurusan');
+    }
+
+    public function scopeUnitPendukung($query)
+    {
+        return $query->where('jenis_unit', 'unit');
+    }
+
+    public function pimpinan()
+    {
+        return $this->belongsTo(User::class, 'pimpinan_user_id');
     }
 }

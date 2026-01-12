@@ -59,7 +59,7 @@ class RolePermissionSeeder extends Seeder
         $roles = [
             'admin',            
             'pembuat_surat',
-            'sekretaris_unit',
+            'sekretaris_direktur',
             'verifikator',
             'pimpinan',
         ];
@@ -82,9 +82,10 @@ class RolePermissionSeeder extends Seeder
             'view own surat',
             'view surat masuk',
             'view surat keluar',
+            'view disposisi',
         ]);
 
-        Role::findByName('sekretaris_unit')->syncPermissions([
+        Role::findByName('sekretaris_direktur')->syncPermissions([
             'create surat',
             'edit own surat',
             'view own surat',

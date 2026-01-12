@@ -6,20 +6,41 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+
+            // akun
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+
+            // pegawai
+            $table->string('nip')->nullable()->unique();
+
+            // relasi organisasi
+            $table->foreignId('unit_id')
+                  ->nullable()
+                  ->constrained('units')
+                  ->nullOnDelete();
+
+            $table->foreignId('jabatan_id')
+                  ->nullable()
+                  ->constrained('jabatans')
+                  ->nullOnDelete();
+
+            // status akun
+            $table->enum('status', ['aktif', 'nonaktif'])
+                  ->default('aktif');
+
+            // TTD DIGITAL (INI YANG PENTING)
+            $table->string('ttd_path', 2048)->nullable();
+            // contoh: storage/ttd/user_12.png
+
+            // bawaan laravel
             $table->rememberToken();
-            $table->foreignId('current_team_id')->nullable();
-            $table->string('profile_photo_path', 2048)->nullable();
             $table->timestamps();
         });
 
@@ -39,13 +60,10 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
     }
 };

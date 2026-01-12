@@ -15,7 +15,11 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class, 
             UnitSeeder::class,           
             JabatanSeeder::class,       
-            UserSeeder::class,           
+            UserSeeder::class, 
+            AlurVerifikasiSeeder::class,
+            JenisSuratSeeder::class,                             
+            TemplateSuratSeeder::class,
+            TemplateFieldSeeder::class,           
         ]);
     }
 }

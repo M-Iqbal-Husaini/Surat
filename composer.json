@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "bacon/bacon-qr-code": "^3.0",
         "laravel/framework": "^12.0",
         "laravel/jetstream": "^5.4",
         "laravel/sanctum": "^4.0",
@@ -28,7 +29,9 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
+        },
+        "files": ["app/Helpers/TemplateRenderer.php"]
+        
     },
     "autoload-dev": {
         "psr-4": {

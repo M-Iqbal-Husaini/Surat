@@ -5,9 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
-use App\Models\SuratMasuk;
-use App\Models\SuratKeluar;
-use App\Models\Disposisi;
+use App\Models\Surat;
+use App\Models\SuratDisposisi;
 use App\Models\TemplateSurat;
 
 class DashboardController extends Controller
@@ -31,8 +30,8 @@ class DashboardController extends Controller
             return $this->verifikatorDashboard($user);
         }
 
-        // sekretaris unit
-        if ($user->hasRole('sekretaris_unit')) {
+        // sekretaris direktur
+        if ($user->hasRole('sekretaris_direktur')) {
             return $this->sekretarisDashboard($user);
         }
 
@@ -47,58 +46,99 @@ class DashboardController extends Controller
 
     protected function adminDashboard(User $user)
     {
-        $data = [
-            'jumlahUser'          => User::count(),
-            'jumlahSuratMasuk'    => class_exists(SuratMasuk::class)   ? SuratMasuk::count()   : 0,
-            'jumlahSuratKeluar'   => class_exists(SuratKeluar::class)  ? SuratKeluar::count()  : 0,
-            'jumlahDisposisi'     => class_exists(Disposisi::class)    ? Disposisi::count()    : 0,
-            'jumlahTemplateSurat' => class_exists(TemplateSurat::class)? TemplateSurat::count(): 0,
-        ];
-
-        return view('admin.dashboard', $data);
+        return view('admin.dashboard', [
+            'jumlahUser'        => User::count(),
+            'jumlahSuratMasuk'  => Surat::whereNotNull('unit_tujuan_id')->count(),
+            'jumlahSuratKeluar' => Surat::whereNotNull('pembuat_id')->count(),
+            'jumlahDisposisi'   => SuratDisposisi::count(),
+            'jumlahTemplateSurat' => TemplateSurat::count(),
+        ]);
     }
+
 
     protected function pimpinanDashboard(User $user)
     {
-        $data = [
-            'jumlahSuratMasuk'    => class_exists(SuratMasuk::class)   ? SuratMasuk::count()   : 0,
-            'jumlahSuratKeluar'   => class_exists(SuratKeluar::class)  ? SuratKeluar::count()  : 0,
-            'jumlahDisposisi'     => class_exists(Disposisi::class)    ? Disposisi::count()    : 0,
-        ];
+        if (!$user->unit_id) {
+            abort(500, 'Pimpinan tidak memiliki unit.');
+        }
 
-        return view('pimpinan.dashboard', $data);
+        $jumlahSuratMasuk = Surat::where('unit_tujuan_id', $user->unit_id)->count();
+
+        $jumlahDisposisi = SuratDisposisi::whereHas('surat', function ($q) use ($user) {
+            $q->where('unit_tujuan_id', $user->unit_id);
+        })->count();
+
+        return view('pimpinan.dashboard', [
+            'jumlahSuratMasuk'  => $jumlahSuratMasuk,
+            'jumlahSuratKeluar' => 0, // pimpinan tidak bikin surat
+            'jumlahDisposisi'   => $jumlahDisposisi,
+        ]);
     }
+
 
     protected function verifikatorDashboard(User $user)
     {
-        $data = [
-            'jumlahSuratMasuk'    => class_exists(SuratMasuk::class)   ? SuratMasuk::count()   : 0,
-            'jumlahSuratKeluar'   => class_exists(SuratKeluar::class)  ? SuratKeluar::count()  : 0,
-        ];
+        if (!$user->jabatan_id) {
+            abort(500, 'Verifikator tidak memiliki jabatan.');
+        }
 
-        return view('verifikator.dashboard', $data);
+        $jumlahSuratMasuk = Surat::whereHas('verifikasi', function ($q) use ($user) {
+            $q->where('jabatan_id', $user->jabatan_id)
+            ->whereIn('status', ['menunggu', 'diproses']);
+        })->count();
+
+        $jumlahSuratSelesai = Surat::whereHas('verifikasi', function ($q) use ($user) {
+            $q->where('jabatan_id', $user->jabatan_id)
+            ->whereIn('status', ['diterima', 'ditolak', 'ditandatangani']);
+        })->count();
+
+        return view('verifikator.dashboard', [
+            'jumlahSuratMasuk'  => $jumlahSuratMasuk,
+            'jumlahSuratKeluar' => 0,
+            'jumlahDisposisi'   => $jumlahSuratSelesai,
+        ]);
     }
 
     protected function sekretarisDashboard(User $user)
     {
-        $data = [
-            'jumlahSuratMasuk'    => class_exists(SuratMasuk::class)   ? SuratMasuk::count()   : 0,
-            'jumlahSuratKeluar'   => class_exists(SuratKeluar::class)  ? SuratKeluar::count()  : 0,
-            'jumlahDisposisi'     => class_exists(Disposisi::class)    ? Disposisi::count()    : 0,
-        ];
+        if (!$user->unit_id) {
+            abort(500, 'Sekretaris Direktur tidak memiliki unit.');
+        }
 
-        return view('sekretaris-unit.dashboard', $data);
+        $jumlahSuratMasuk = Surat::where('unit_tujuan_id', $user->unit_id)->count();
+
+        $jumlahSuratKeluar = Surat::where('unit_asal_id', $user->unit_id)->count();
+
+        $jumlahDisposisi = SuratDisposisi::whereHas('surat', function ($q) use ($user) {
+            $q->where('unit_tujuan_id', $user->unit_id);
+        })->count();
+
+        return view('sekretaris-direktur.dashboard', [
+            'jumlahSuratMasuk'  => $jumlahSuratMasuk,
+            'jumlahSuratKeluar' => $jumlahSuratKeluar,
+            'jumlahDisposisi'   => $jumlahDisposisi,
+        ]);
     }
+
 
     protected function pembuatSuratDashboard(User $user)
     {
-        $data = [
-            'jumlahSuratMasuk'    => class_exists(SuratMasuk::class)   ? SuratMasuk::count()   : 0,
-            'jumlahSuratKeluar'   => class_exists(SuratKeluar::class)  ? SuratKeluar::count()  : 0,
-            'jumlahDisposisi'     => class_exists(Disposisi::class)    ? Disposisi::count()    : 0,
-        ];
+        $jumlahSuratKeluar = Surat::where('pembuat_id', $user->id)->count();
 
-        return view('pembuat-surat.dashboard', $data);
+        $jumlahSuratMasuk = Surat::where('unit_tujuan_id', $user->unit_id)
+            ->where('pembuat_id', '!=', $user->id)
+            ->count();
+
+        $jumlahDisposisi = SuratDisposisi::whereHas('surat', function ($q) use ($user) {
+            $q->where('unit_tujuan_id', $user->unit_id);
+        })->count();
+
+        return view('pembuat-surat.dashboard', [
+            'jumlahSuratMasuk'  => $jumlahSuratMasuk,
+            'jumlahSuratKeluar' => $jumlahSuratKeluar,
+            'jumlahDisposisi'   => $jumlahDisposisi,
+        ]);
     }
+
 
 }

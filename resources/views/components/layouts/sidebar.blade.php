@@ -24,7 +24,7 @@
 
         if ($user->hasRole('admin'))            $rolePriority[] = 'admin.';
         if ($user->hasRole('verifikator'))      $rolePriority[] = 'verifikator.';
-        if ($user->hasRole('sekretaris_unit'))  $rolePriority[] = 'sekretaris-unit.';
+        if ($user->hasRole('sekretaris_direktur'))  $rolePriority[] = 'sekretaris-direktur.';
         if ($user->hasRole('pimpinan'))         $rolePriority[] = 'pimpinan.';
         if ($user->hasRole('pembuat_surat'))    $rolePriority[] = 'pembuat-surat.';
 
@@ -83,7 +83,11 @@
         ],
     ];
 
-    // ADMIN: Monitoring Surat (submenu)
+    /*
+    |--------------------------------------------------------------------------
+    | ADMIN: Monitoring Surat (TANPA DISPOSISI)
+    |--------------------------------------------------------------------------
+    */
     if ($isAdmin) {
         $menus[] = [
             'type'   => 'group',
@@ -112,17 +116,20 @@
         ];
     }
 
-    // NON-ADMIN: surat masuk/keluar tanpa submenu (pilih route yg ada sesuai role)
+    /*
+    |--------------------------------------------------------------------------
+    | NON-ADMIN: Surat Masuk & Keluar
+    |--------------------------------------------------------------------------
+    */
     if (!$isAdmin) {
         $menus[] = [
             'type'   => 'link',
             'label'  => 'Surat Masuk',
             'routes' => [
                 'pembuat-surat.surat-masuk.index',
-                'sekretaris-unit.surat-masuk.index',
+                'sekretaris-direktur.surat-masuk.index',
                 'verifikator.surat-masuk.index',
                 'pimpinan.surat-masuk.index',
-                'surat-masuk.index',
             ],
             'active' => '*.surat-masuk.*',
             'icon'   => 'inbox',
@@ -134,10 +141,9 @@
             'label'  => 'Surat Keluar',
             'routes' => [
                 'pembuat-surat.surat-keluar.index',
-                'sekretaris-unit.surat-keluar.index',
+                'sekretaris-direktur.surat-keluar.index',
                 'verifikator.surat-keluar.index',
                 'pimpinan.surat-keluar.index',
-                'surat-keluar.index',
             ],
             'active' => '*.surat-keluar.*',
             'icon'   => 'send',
@@ -145,59 +151,69 @@
         ];
     }
 
-    // Menu lain tetap multi-role 
-    $menus = array_merge($menus, [
-        [
+    /*
+    |--------------------------------------------------------------------------
+    | DISPOSISI — KHUSUS NON ADMIN (INI INTINYA)
+    |--------------------------------------------------------------------------
+    */
+    if (!$isAdmin) {
+        $menus[] = [
             'type'   => 'link',
             'label'  => 'Disposisi',
             'routes' => [
-                'admin.disposisi.index',
                 'pembuat-surat.disposisi.index',
-                'sekretaris-unit.disposisi.index',
+                'sekretaris-direktur.disposisi.index',
                 'verifikator.disposisi.index',
                 'pimpinan.disposisi.index',
-                'disposisi.index',
             ],
             'active' => '*.disposisi.*',
             'icon'   => 'list',
             'can'    => 'view disposisi',
-        ],
-        [
+        ];
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ADMIN MASTER DATA
+    |--------------------------------------------------------------------------
+    */
+    if ($isAdmin) {
+        $menus[] = [
             'type'   => 'link',
             'label'  => 'Template Surat',
-            'routes' => [
-                'admin.template-surat.index',
-                'template-surat.index',
-            ],
-            'active' => '*.template-surat.*',
+            'routes' => ['admin.template-surat.index'],
+            'active' => 'admin.template-surat.*',
             'icon'   => 'template',
             'can'    => 'manage templates',
-        ],
-        [
+        ];
+
+        $menus[] = [
             'type'   => 'link',
             'label'  => 'Struktur Unit',
             'routes' => ['admin.struktur-unit.index'],
             'active' => 'admin.struktur-unit.*',
             'icon'   => 'struc',
             'can'    => 'manage struktur unit',
-        ],
-        [
+        ];
+
+        $menus[] = [
             'type'   => 'link',
             'label'  => 'Jalur Surat',
             'routes' => ['admin.jalur-surat.index'],
             'active' => 'admin.jalur-surat.*',
             'icon'   => 'list',
             'can'    => 'manage jalur surat',
-        ],
-        [
+        ];
+
+        $menus[] = [
             'type'   => 'link',
             'label'  => 'Akun User',
             'routes' => ['admin.users.index'],
             'active' => 'admin.users.*',
             'icon'   => 'users',
             'can'    => 'manage users',
-        ],
-    ]);
+        ];
+    }
 @endphp
 
 {{-- SIDEBAR --}}

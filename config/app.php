@@ -123,4 +123,8 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'ttd_ip' => env('APP_TTD_IP', '127.0.0.1'),
+    'ttd_port' => env('APP_TTD_PORT', '8000'),
+
+
 ];
