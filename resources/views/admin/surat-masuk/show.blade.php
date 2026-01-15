@@ -4,10 +4,8 @@
 <div x-data="{ sidebarOpen: false, sidebarCollapsed: false }" class="min-h-screen bg-slate-50">
     <div class="flex min-h-screen">
 
-        {{-- SIDEBAR --}}
         <x-layouts.sidebar />
 
-        {{-- OVERLAY --}}
         <div
             class="fixed inset-0 bg-slate-900/40 z-30 lg:hidden"
             x-show="sidebarOpen"
@@ -15,7 +13,6 @@
             x-cloak
         ></div>
 
-        {{-- MAIN --}}
         <div
             class="flex-1 flex flex-col transition-all duration-300"
             :class="{
@@ -31,55 +28,54 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="text-xl font-semibold text-slate-800">
-                            Preview Surat Keluar
+                            Detail Surat Masuk
                         </h1>
                         <p class="text-sm text-slate-500">
-                            Pratinjau dan status surat
+                            Monitoring dan audit surat masuk
                         </p>
                     </div>
 
-                    <a href="{{ route('pembuat-surat.surat-keluar.index') }}"
-                       class="px-4 py-2 rounded-lg border text-slate-600 hover:bg-slate-100">
+                    <a
+                        href="{{ route('admin.surat-masuk.index') }}"
+                        class="px-4 py-2 rounded-lg border text-slate-600 hover:bg-slate-100"
+                    >
                         ← Kembali
                     </a>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                    {{-- ================= LEFT ================= --}}
+                    {{-- PREVIEW SURAT --}}
                     <div class="lg:col-span-2 bg-white rounded-xl border shadow-sm">
                         <div class="p-6 overflow-auto max-h-[75vh]">
                             <div class="mx-auto bg-gray-100 p-6 rounded-lg" style="max-width: 21cm">
                                 <div class="mx-auto bg-white shadow" style="min-height: 29.7cm">
-
                                     @include('partials.surat-preview', [
                                         'template'    => $surat->template,
-                                        'previewHtml' => $previewHtml,
+                                        'previewHtml' => $previewHtml ?? null,
                                         'surat'       => $surat
                                     ])
-
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {{-- ================= RIGHT ================= --}}
+                    {{-- SIDEBAR INFO --}}
                     <div class="space-y-6">
 
-                        {{-- INFO --}}
+                        {{-- METADATA --}}
                         <div class="bg-white rounded-xl border shadow-sm p-5 space-y-3 text-sm">
-
                             <div>
-                                <span class="text-slate-500">Unit Asal</span>
+                                <span class="text-slate-500">Asal Surat</span>
                                 <p class="font-medium text-slate-800">
-                                    {{ $surat->unitAsal?->nama_unit }}
+                                    {{ $surat->unitAsal?->nama_unit ?? '-' }}
                                 </p>
                             </div>
 
                             <div>
-                                <span class="text-slate-500">Unit Tujuan</span>
+                                <span class="text-slate-500">Tujuan Surat</span>
                                 <p class="font-medium text-slate-800">
-                                    {{ $surat->unitTujuan?->nama_unit }}
+                                    {{ $surat->unitTujuan?->nama_unit ?? '-' }}
                                 </p>
                             </div>
 
@@ -91,15 +87,31 @@
                             </div>
 
                             <div>
-                                <span class="text-slate-500">Status</span><br>
-                                <span class="inline-block px-2 py-1 text-xs rounded bg-slate-100">
-                                    {{ ucfirst($surat->status) }}
-                                </span>
+                                <span class="text-slate-500">Tanggal Surat</span>
+                                <p class="font-medium text-slate-800">
+                                    {{ $surat->tanggal_surat?->format('d M Y') }}
+                                </p>
                             </div>
 
+                            @php
+                                [$label, $badge] = match($surat->status) {
+                                    'final'     => ['Final', 'bg-green-100 text-green-700'],
+                                    'ditolak'   => ['Ditolak', 'bg-red-100 text-red-700'],
+                                    'direvisi'  => ['Direvisi', 'bg-orange-100 text-orange-700'],
+                                    'disposisi' => ['Disposisi', 'bg-indigo-100 text-indigo-700'],
+                                    default     => ['Diproses', 'bg-blue-100 text-blue-700'],
+                                };
+                            @endphp
+
+                            <div>
+                                <span class="text-slate-500">Status Surat</span><br>
+                                <span class="inline-block px-2 py-1 text-xs rounded {{ $badge }}">
+                                    {{ $label }}
+                                </span>
+                            </div>
                         </div>
 
-                        {{-- ================= ALUR VERIFIKASI ================= --}}
+                        {{-- ALUR VERIFIKASI --}}
                         <div class="bg-white rounded-xl border shadow-sm p-5">
                             <h3 class="text-sm font-semibold text-slate-700 mb-4">
                                 Alur Verifikasi
@@ -110,7 +122,7 @@
                                     @php
                                         [$dot, $label] = match($step['state']) {
                                             'done'      => ['bg-emerald-500', 'Selesai'],
-                                            'active'    => ['bg-blue-500 animate-pulse', 'Sedang Diproses'],
+                                            'active'    => ['bg-blue-500 animate-pulse', 'Diproses'],
                                             'direvisi'  => ['bg-orange-500', 'Direvisi'],
                                             'disposisi' => ['bg-indigo-500', 'Disposisi'],
                                             'ditolak'   => ['bg-red-500', 'Ditolak'],
@@ -136,66 +148,12 @@
                             </ol>
                         </div>
 
-                        {{-- ================= ACTION BAR ================= --}}
-                        <div class="bg-white rounded-xl border shadow-sm p-5 space-y-3">
-
-                            {{-- 📤 AJUKAN --}}
-                            @if($canAjukan)
-                                <form method="POST"
-                                    action="{{ route('pembuat-surat.surat-keluar.diajukan', $surat) }}">
-                                    @csrf
-                                    <button
-                                        class="w-full px-3 py-1.5 text-sm
-                                            bg-indigo-100 hover:bg-indigo-200
-                                            text-indigo-700 font-medium rounded-lg">
-                                        📤 Ajukan Surat
-                                    </button>
-                                </form>
-                            @endif
-
-                            {{-- ✏️ EDIT --}}
-                            @if($canEdit)
-                                <a href="{{ route('pembuat-surat.surat-keluar.edit', $surat) }}"
-                                class="block text-center px-3 py-1.5 text-sm
-                                        bg-amber-100 hover:bg-amber-200
-                                        text-amber-800 font-medium rounded-lg mb-2">
-                                    ✏️ Edit Surat
-                                </a>
-                            @endif
-
-                            {{-- ✍️ TTD --}}
-                            @if($canTtdPembuat)
-                                <form method="POST"
-                                    action="{{ route('pembuat-surat.surat-keluar.diajukan', $surat) }}"
-                                    class="mb-2">
-                                    @csrf
-                                    <button
-                                        class="w-full px-3 py-1.5 text-sm
-                                            bg-green-100 hover:bg-green-200
-                                            text-green-700 font-medium rounded-lg">
-                                        ✍️ Tanda Tangani Surat
-                                    </button>
-                                </form>
-                            @endif
-
-                            {{-- 🔒 TIDAK ADA AKSI --}}
-                            @if(!$canEdit && !$canAjukan && !$canTtdPembuat)
-                                <div class="text-sm text-slate-500 text-center">
-                                    Surat sedang diproses atau telah selesai.
-                                </div>
-                            @endif
-
-                        </div>
-
                     </div>
                 </div>
-
             </main>
         </div>
     </div>
 </div>
 
-<style>
-[x-cloak] { display: none !important; }
-</style>
+<style>[x-cloak]{display:none!important}</style>
 </x-app-layout>

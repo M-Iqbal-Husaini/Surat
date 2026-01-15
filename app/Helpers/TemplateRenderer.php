@@ -5,27 +5,27 @@ namespace App\Helpers;
 use App\Models\TemplateSurat;
 use Illuminate\Support\Str;
 use Illuminate\Support\Carbon;
+use App\Models\Surat;
 
 class TemplateRenderer
 {
     /**
      * Render template surat dengan data (real / preview)
      */
-    public static function render(TemplateSurat $template, array $data = []): string
+    public static function render(Surat $surat): string
     {
-        $html = $template->body_html;
+        $template = $surat->template;
 
-        if (!$html || $template->fields->isEmpty()) {
+        if (!$template) {
             return '';
         }
 
-        foreach ($template->fields as $field) {
-            $key   = $field->field_key;
-            $value = $data[$key] ?? self::dummyValue($field);
+        $html = $template->body_html;
 
+        foreach ($surat->data_json ?? [] as $key => $value) {
             $html = str_replace(
-                '{{' . $key . '}}',
-                self::formatValue($value, $field->type),
+                ['{{'.$key.'}}', '{{ '.$key.' }}'],
+                nl2br(e($value)),
                 $html
             );
         }

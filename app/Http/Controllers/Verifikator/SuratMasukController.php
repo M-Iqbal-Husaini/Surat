@@ -13,28 +13,59 @@ class SuratMasukController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
+        /**
+         * ===============================
+         * WORKFLOW VERIFIKASI
+         * ===============================
+         * - pending           → perlu setujui / tolak
+         * - selesai + perlu_ttd → perlu TTD
+         */
         $workflow = Surat::query()
             ->whereHas('verifikasi', function ($q) use ($user) {
                 $q->where('jabatan_id', $user->jabatan_id)
+                ->whereColumn('urutan', 'surat.step_aktif')
+                ->where(function ($q) {
+                    $q->where('status', 'pending')
+                        ->orWhere(function ($q) {
+                            $q->where('status', 'selesai')
+                            ->where('perlu_ttd', 1);
+                        });
+                });
+            });
+
+        /**
+         * ===============================
+         * DISPOSISI AKTIF KE SAYA
+         * ===============================
+         */
+        $disposisi = Surat::query()
+            ->whereHas('disposisiAktif', function ($q) use ($user) {
+                $q->where('ke_jabatan_id', $user->jabatan_id)
                 ->where('status', 'pending');
             });
 
-        $disposisi = Surat::query()
-            ->whereHas('disposisiAktif', function ($q) use ($user) {
-                $q->where('ke_jabatan_id', $user->jabatan_id);
-            });
-
+        /**
+         * ===============================
+         * UNION + LOAD RELATION
+         * ===============================
+         */
         $suratMasuk = $workflow
             ->union($disposisi)
-            ->with(['template', 'unitAsal', 'pembuat'])
+            ->with([
+                'template',
+                'unitAsal',
+                'pembuat',
+            ])
             ->orderByDesc('tanggal_surat')
             ->get();
 
-        return view('verifikator.surat-masuk.index', compact('suratMasuk'));
+        return view(
+            'verifikator.surat-masuk.index',
+            compact('suratMasuk')
+        );
     }
-
 
     public function show(Surat $surat)
     {
@@ -61,11 +92,19 @@ class SuratMasukController extends Controller
 
         $isMyTurn =
             $stepSaya &&
-            $stepSaya->status === 'pending' &&
             $stepSaya->urutan === $surat->step_aktif;
 
-        $showTtd = $isMyTurn && $stepSaya->perlu_ttd;
-        $showApproveReject = $isMyTurn && !$stepSaya->perlu_ttd;
+        // 1️⃣ Verifikasi dulu
+        $showApproveReject =
+            $isMyTurn &&
+            $stepSaya->status === 'pending';
+
+        // 2️⃣ TTD hanya setelah disetujui
+        $showTtd =
+            $isMyTurn &&
+            $stepSaya->perlu_ttd &&
+            $stepSaya->status === 'selesai';
+
 
         return view('verifikator.surat-masuk.show', compact(
             'surat',

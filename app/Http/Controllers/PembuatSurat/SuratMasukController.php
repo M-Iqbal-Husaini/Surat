@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Surat;
 use App\Models\SuratVerifikasi;
 use App\Models\Jabatan;
+use App\Models\Unit;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Presenters\AlurVerifikasiPresenter;
 use App\Services\SuratWorkflowService;
+
 
 class SuratMasukController extends Controller
 {
@@ -171,7 +173,12 @@ class SuratMasukController extends Controller
                 'disposisiAktif',
                 'jabatanTujuan'
             )
-        );
+                )->with([
+            'unitTujuan' => Unit::where('jenis_unit', 'unit')
+                ->where('id', '!=', $user->unit_id)
+                ->orderBy('nama_unit')
+                ->get(),
+        ]);
     }
 
     public function terima(Surat $surat)
@@ -225,14 +232,18 @@ class SuratMasukController extends Controller
     public function disposisi(Surat $surat, Request $request)
     {
         $request->validate([
-            'ke_jabatan_id'     => 'required|exists:jabatans,id',
+            'unit_tujuan_id'    => 'required|exists:units,id',
             'catatan_disposisi' => 'required|string|max:1000',
         ]);
+
+        $jabatanTujuan = Jabatan::where('unit_id', $request->unit_tujuan_id)
+            ->orderBy('level')
+            ->firstOrFail();
 
         SuratWorkflowService::disposisi(
             $surat,
             Auth::user(),
-            $request->ke_jabatan_id,
+            $jabatanTujuan->id,
             $request->catatan_disposisi
         );
 

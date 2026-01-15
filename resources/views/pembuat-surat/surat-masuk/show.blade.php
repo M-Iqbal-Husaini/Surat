@@ -248,14 +248,12 @@
                 class="w-full px-3 py-2 border rounded-lg text-sm"></textarea>
 
             <select
-                name="ke_jabatan_id"
+                name="unit_tujuan_id"
                 required
                 class="w-full px-3 py-2 border rounded-lg text-sm">
-                <option value="">-- Pilih Jabatan --</option>
-                @foreach($jabatanTujuan as $jabatan)
-                    <option value="{{ $jabatan->id }}">
-                        {{ $jabatan->nama_jabatan }}
-                    </option>
+                <option value="">-- Pilih Unit Tujuan --</option>
+                @foreach($unitTujuan as $unit)
+                    <option value="{{ $unit->id }}">{{ $unit->nama_unit }}</option>
                 @endforeach
             </select>
 

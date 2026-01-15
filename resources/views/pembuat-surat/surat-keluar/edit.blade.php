@@ -38,6 +38,45 @@
                     </p>
                 </div>
 
+                @php
+                    $catatanRevisi = $surat->verifikasi
+                        ->where('status', 'direvisi')
+                        ->whereNotNull('catatan')
+                        ->first();
+                @endphp
+
+
+                {{-- ================= CATATAN REVISI ================= --}}
+                @if($surat->status === 'direvisi' && $catatanRevisi)
+                    <div class="bg-orange-50 border border-orange-200 rounded-xl p-5">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    class="w-5 h-5 text-orange-500 mt-0.5"
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+
+                            <div class="flex-1">
+                                <h3 class="text-sm font-semibold text-orange-800">
+                                    Catatan Revisi
+                                </h3>
+
+                                <p class="mt-2 text-sm text-orange-700 whitespace-pre-line">
+                                    {{ $catatanRevisi->catatan }}
+                                </p>
+
+                                <p class="mt-3 text-xs text-orange-500">
+                                    Oleh: {{ $catatanRevisi->jabatan->nama_jabatan ?? 'Verifikator' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+
                 {{-- FORM --}}
                 <form method="POST"
                       action="{{ route('pembuat-surat.surat-keluar.update', $surat) }}"

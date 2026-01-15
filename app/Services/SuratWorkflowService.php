@@ -153,6 +153,7 @@ class SuratWorkflowService
         self::guardFinal($surat);
 
         DB::transaction(function () use ($surat, $user) {
+
             $step = self::stepAktif($surat);
 
             abort_if(
@@ -161,23 +162,22 @@ class SuratWorkflowService
                 403
             );
 
-            if ($step->perlu_ttd && self::isLastStep($step)) {
-                $step->update([
-                    'status'   => 'ditandatangani',
-                    'user_id'  => $user->id,
-                    'acted_at' => now(),
-                ]);
-
-                FinalisasiSuratService::finalisasi($surat, $user);
-                return;
-            }
-
+            // 1️⃣ Tandai verifikasi SELESAI
             $step->update([
                 'status'   => 'selesai',
                 'user_id'  => $user->id,
                 'acted_at' => now(),
             ]);
 
+            // 2️⃣ Jika perlu TTD, JANGAN lanjut step
+            if ($step->perlu_ttd) {
+                $surat->update([
+                    'status' => 'menunggu_ttd',
+                ]);
+                return;
+            }
+
+            // 3️⃣ Lanjut step berikutnya
             $next = self::nextStep($step);
 
             if ($next) {
@@ -190,7 +190,6 @@ class SuratWorkflowService
                     'status'   => 'pending',
                     'acted_at' => now(),
                 ]);
-
                 return;
             }
 
@@ -307,6 +306,7 @@ class SuratWorkflowService
         self::guardFinal($surat);
 
         DB::transaction(function () use ($surat, $user) {
+
             $disposisi = $surat->disposisiAktif;
 
             abort_if(
@@ -316,51 +316,78 @@ class SuratWorkflowService
                 403
             );
 
+            // 1️⃣ Selesaikan disposisi
             $disposisi->update([
                 'status'          => 'selesai',
                 'tindaklanjut_at' => now(),
             ]);
 
-            $step = self::stepAktif($surat);
+            // 2️⃣ Ambil step yang tadi DISPOSISI
+            $step = SuratVerifikasi::where('surat_id', $surat->id)
+                ->where('status', 'disposisi')
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            if ($step->status === 'disposisi') {
-                $step->update([
+            // 3️⃣ Tandai step SELESAI (BUKAN pending)
+            $step->update([
+                'status'   => 'selesai',
+                'acted_at' => now(),
+            ]);
+
+            // 4️⃣ Lanjut ke step berikutnya
+            $next = self::nextStep($step);
+
+            if ($next) {
+                $surat->update([
+                    'status'     => 'diproses',
+                    'step_aktif' => $next->urutan,
+                ]);
+
+                $next->update([
                     'status'   => 'pending',
                     'acted_at' => now(),
                 ]);
+
+                return;
             }
 
-            $surat->update([
-                'status' => 'diproses',
-            ]);
+            // 5️⃣ Jika tidak ada step lagi → FINAL
+            FinalisasiSuratService::finalisasi($surat, $user);
         });
     }
+
 
     public static function sign(Surat $surat, $user): void
     {
         self::guardFinal($surat);
 
         DB::transaction(function () use ($surat, $user) {
+
+            // 🔒 Ambil step aktif
             $step = self::stepAktif($surat);
 
+            // ❌ Validasi keras
             abort_if(
                 !$step->perlu_ttd ||
                 $step->jabatan_id !== $user->jabatan_id ||
-                $step->status !== 'pending',
+                $step->status !== 'selesai', // ⬅️ INI KUNCI UTAMA
                 403
             );
 
+            // ✍️ TTD oleh pejabat
             $step->update([
                 'status'   => 'ditandatangani',
                 'user_id'  => $user->id,
                 'acted_at' => now(),
             ]);
 
+            // 🔚 Jika step terakhir → finalisasi
             if (self::isLastStep($step)) {
                 FinalisasiSuratService::finalisasi($surat, $user);
                 return;
             }
 
+            // ➡️ Lanjut ke step berikutnya
             $next = self::nextStep($step);
 
             $surat->update([
@@ -374,4 +401,5 @@ class SuratWorkflowService
             ]);
         });
     }
+
 }

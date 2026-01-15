@@ -75,66 +75,106 @@
                         </div>
 
                         {{-- ANALYTICS (MASIH SAMA DENGAN VERSI KITA BARUSAN) --}}
-                        @php
-                            $barsMasuk  = [160,380,300,250,280,260,360,180,220,310,200,340];
-                            $barsKeluar = [120,260,200,190,210,190,240,130,180,230,160,260];
-                            $months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-                        @endphp
-
-                        <div class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200">
-                            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                            
+                            {{-- Header Chart --}}
+                            <div class="flex justify-between items-start mb-6">
                                 <div>
-                                    <h2 class="text-sm font-semibold text-slate-800">
-                                        Analytics Surat
+                                    <h2 class="text-sm font-bold text-slate-800">
+                                        Analytics Surat Tahun {{ $tahun }}
                                     </h2>
-                                    <p class="text-xs text-slate-400">
-                                        Statistik surat 12 bulan terakhir (dummy chart)
+                                    <p class="text-xs text-slate-400 mt-1">
+                                        Monitoring volume surat masuk vs keluar
                                     </p>
                                 </div>
-
-                                <div
-                                    class="inline-flex rounded-full border border-slate-200 bg-slate-50 text-[11px] font-medium overflow-hidden">
-                                    <button class="px-3 py-1.5 bg-white text-slate-800">
-                                        12 months
-                                    </button>
-                                    <button class="px-3 py-1.5 text-slate-500 hover:bg-slate-100">
-                                        30 days
-                                    </button>
-                                    <button class="px-3 py-1.5 text-slate-500 hover:bg-slate-100">
-                                        7 days
-                                    </button>
-                                    <button class="px-3 py-1.5 text-slate-500 hover:bg-slate-100">
-                                        24 hours
-                                    </button>
-                                </div>
+                                {{-- Badge Tahun --}}
+                                <span class="px-2 py-1 text-[10px] font-medium bg-slate-100 text-slate-600 rounded">
+                                    {{ $tahun }}
+                                </span>
                             </div>
 
-                            <div class="mt-4 overflow-x-auto">
-                                <div class="min-w-[640px]">
-                                    <div class="flex items-end h-64 space-x-4">
+                            @php
+                                $months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+                                // Cari nilai tertinggi untuk skala chart (supaya bar tidak mentok atau terlalu pendek)
+                                // Jika data kosong semua, default max 1 agar tidak divide by zero
+                                $maxData = max(array_merge($chartMasuk, $chartKeluar));
+                                $maxValue = $maxData > 0 ? $maxData : 1;
+                            @endphp
+
+                            {{-- Chart Area Wrapper --}}
+                            <div class="overflow-x-auto">
+                                <div class="min-w-[600px] sm:min-w-full">
+                                    
+                                    {{-- BAR CHART CONTAINER --}}
+                                    {{-- h-64 menetapkan tinggi area chart --}}
+                                    <div class="flex items-end h-64 gap-3 sm:gap-4 border-b border-slate-100 pb-2">
+                                        
                                         @foreach($months as $i => $bulan)
-                                            <div class="flex-1 flex flex-col items-center">
-                                                <div class="flex-1 flex items-end space-x-1 w-full">
-                                                    <div class="flex-1 rounded-full bg-indigo-400"
-                                                         style="height: {{ $barsMasuk[$i] / 4 }}%"></div>
-                                                    <div class="flex-1 rounded-full bg-emerald-400 opacity-80"
-                                                         style="height: {{ $barsKeluar[$i] / 4 }}%"></div>
+                                            @php
+                                                // Hitung persentase tinggi bar
+                                                $percentMasuk  = ($chartMasuk[$i] / $maxValue) * 100;
+                                                $percentKeluar = ($chartKeluar[$i] / $maxValue) * 100;
+                                            @endphp
+
+                                            {{-- KOLOM PER BULAN --}}
+                                            {{-- group: untuk trigger hover effect --}}
+                                            <div class="flex-1 flex flex-col justify-end h-full group relative">
+                                                
+                                                {{-- Tooltip (Akan muncul saat mouse hover di kolom bulan ini) --}}
+                                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-max">
+                                                    <div class="bg-slate-800 text-white text-[10px] rounded py-1 px-2 shadow-lg">
+                                                        <div class="font-semibold mb-1">{{ $bulan }}</div>
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                            <span>M: {{ $chartMasuk[$i] }}</span>
+                                                        </div>
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+                                                            <span>K: {{ $chartKeluar[$i] }}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <span class="text-[10px] text-slate-400 mt-2">{{ $bulan }}</span>
+
+                                                {{-- Area Bar (Side by Side) --}}
+                                                <div class="flex items-end justify-center gap-[2px] w-full h-full">
+                                                    
+                                                    {{-- Bar Surat Masuk (Blue) --}}
+                                                    <div class="w-full bg-blue-100 rounded-t-sm relative transition-all duration-500 ease-out"
+                                                        style="height: {{ $percentMasuk }}%">
+                                                        {{-- Inner Color (untuk efek visual lebih bagus) --}}
+                                                        <div class="absolute bottom-0 w-full bg-blue-500 rounded-t-sm" style="height: 100%"></div>
+                                                    </div>
+
+                                                    {{-- Bar Surat Keluar (Yellow) --}}
+                                                    <div class="w-full bg-yellow-100 rounded-t-sm relative transition-all duration-500 ease-out"
+                                                        style="height: {{ $percentKeluar }}%">
+                                                        <div class="absolute bottom-0 w-full bg-yellow-400 rounded-t-sm" style="height: 100%"></div>
+                                                    </div>
+                                                </div>
+
+                                                {{-- Label Bulan --}}
+                                                <div class="mt-2 text-center">
+                                                    <span class="text-[10px] text-slate-400 font-medium group-hover:text-slate-600">
+                                                        {{ $bulan }}
+                                                    </span>
+                                                </div>
+
                                             </div>
                                         @endforeach
                                     </div>
 
-                                    <div class="flex items-center justify-end space-x-4 mt-4 text-[11px]">
-                                        <span class="inline-flex items-center text-slate-500">
-                                            <span class="h-2 w-2 rounded-full bg-indigo-500 mr-1.5"></span>
-                                            Surat Masuk
-                                        </span>
-                                        <span class="inline-flex items-center text-slate-500">
-                                            <span class="h-2 w-2 rounded-full bg-emerald-500 mr-1.5"></span>
-                                            Surat Keluar
-                                        </span>
+                                    {{-- Legend --}}
+                                    <div class="flex justify-center gap-6 mt-6">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                            <span class="text-xs text-slate-600">Surat Masuk</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+                                            <span class="text-xs text-slate-600">Surat Keluar</span>
+                                        </div>
                                     </div>
+
                                 </div>
                             </div>
                         </div>

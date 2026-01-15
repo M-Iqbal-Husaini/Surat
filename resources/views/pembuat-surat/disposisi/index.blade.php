@@ -52,8 +52,16 @@
                                             {{ $item->surat->perihal}}
                                         </td>
                                         <td class="p-3 text-center">
-                                            <span class="inline-block px-2 py-1 text-xs rounded bg-yellow-100 text-yellow-700">
-                                                Pending
+                                            @php
+                                                $statusMap = [
+                                                    'pending' => ['bg-yellow-100 text-yellow-700', 'Pending'],
+                                                    'selesai' => ['bg-emerald-100 text-emerald-700', 'Selesai'],
+                                                ];
+                                            @endphp
+
+                                            <span class="inline-block px-2 py-1 text-xs rounded
+                                                {{ $statusMap[$item->status][0] ?? 'bg-slate-100 text-slate-600' }}">
+                                                {{ $statusMap[$item->status][1] ?? ucfirst($item->status) }}
                                             </span>
                                         </td>
                                         <td class="p-3 text-center">

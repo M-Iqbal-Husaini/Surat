@@ -135,6 +135,20 @@
                             </ol>
                         </div>
 
+                        @if($disposisiAktif)
+                        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5 text-sm">
+                            <p class="font-medium text-indigo-700">
+                                Disposisi ke: {{ $disposisiAktif->keJabatan?->nama_jabatan ?? '-' }}
+                            </p>
+                            <p class="mt-1 text-slate-600">
+                                Catatan: {{ $disposisiAktif->instruksi }}
+                            </p>
+                            <p class="mt-1 text-xs text-slate-500">
+                                Status: {{ ucfirst($disposisiAktif->status) }}
+                            </p>
+                        </div>
+                        @endif
+
                         {{-- ================= ACTION ================= --}}
                         <div class="bg-white rounded-xl border shadow-sm p-5 space-y-3">
 

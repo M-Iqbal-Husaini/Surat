@@ -195,31 +195,35 @@ class SuratKeluarController extends Controller
         $canAjukan      = false;
         $canTtdPembuat  = false;
 
-        // ===============================
-        // RULE UI PEMBUAT (HANYA STEP 1)
-        // ===============================
-        if (
-            $surat->status === 'draft' &&
-            (int) $stepAktif->urutan === 1
-        ) {
-
-            // boleh edit SELAMA draft
-            $canEdit = true;
+        if ((int) $stepAktif->urutan === 1) {
 
             /**
-             * RULE UTAMA:
-             * - perlu_ttd = true  → tampilkan tombol TTD
-             * - perlu_ttd = false → tampilkan tombol AJUKAN
-             *
-             * Antar unit / internal TIDAK BOLEH ditebak di UI
-             * Validasi final tetap di WorkflowService
+             * ===============================
+             * STATUS DIREVISI
+             * ===============================
+             * WAJIB edit, TIDAK boleh ajukan / ttd
              */
-            if ($stepAktif->perlu_ttd) {
-                $canTtdPembuat = true;
-            } else {
-                $canAjukan = true;
+            if ($surat->status === 'direvisi') {
+                $canEdit = true;
+            }
+
+            /**
+             * ===============================
+             * STATUS DRAFT
+             * ===============================
+             * Edit + (Ajukan / TTD)
+             */
+            if ($surat->status === 'draft') {
+                $canEdit = true;
+
+                if ($stepAktif->perlu_ttd) {
+                    $canTtdPembuat = true;
+                } else {
+                    $canAjukan = true;
+                }
             }
         }
+
 
         return view(
             'pembuat-surat.surat-keluar.show',

@@ -55,9 +55,10 @@
             </div>
 
             {{-- BLOK TTD DIGITAL --}}
-            @if($surat->canShowQr())
-                    {!! $surat->qr_svg !!}
+            @if($surat->signed_at && $surat->qr_svg)
+                {!! $surat->qr_svg !!}
             @endif
+
             
 
             {{-- NAMA --}}

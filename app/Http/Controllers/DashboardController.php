@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\Surat;
 use App\Models\SuratDisposisi;
-use App\Models\TemplateSurat;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
@@ -15,130 +15,148 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        // admin IT = super admin sistem
         if ($user->hasRole('admin')) {
             return $this->adminDashboard($user);
         }
 
-        // pimpinan (jurusan / institusi)
         if ($user->hasAnyRole(['pimpinan'])) {
             return $this->pimpinanDashboard($user);
         }
 
-        // verifikator
         if ($user->hasRole('verifikator')) {
             return $this->verifikatorDashboard($user);
         }
 
-        // sekretaris direktur
         if ($user->hasRole('sekretaris_direktur')) {
             return $this->sekretarisDashboard($user);
         }
 
-        // pembuat surat
         if ($user->hasRole('pembuat_surat')) {
             return $this->pembuatSuratDashboard($user);
         }
 
-        // fallback kalau belum punya role / untuk testing
-        abort(403, 'Anda tidak memiliki akses ke dashboard.');
+        abort(403);
     }
 
+    /* =========================================================
+     * CORE ANALYTICS (SOURCE OF TRUTH)
+     * ========================================================= */
+    protected function analyticsSurat(
+        callable $queryMasuk,
+        callable $queryKeluar
+    ) {
+        $year = now()->year;
+
+        $masuk  = array_fill(0, 12, 0);
+        $keluar = array_fill(0, 12, 0);
+
+        $suratMasuk = $queryMasuk(
+            Surat::whereYear('tanggal_surat', $year)
+        )->get(['tanggal_surat']);
+
+        foreach ($suratMasuk as $s) {
+            $bulan = Carbon::parse($s->tanggal_surat)->month - 1;
+            $masuk[$bulan]++;
+        }
+
+        $suratKeluar = $queryKeluar(
+            Surat::whereYear('tanggal_surat', $year)
+        )->get(['tanggal_surat']);
+
+        foreach ($suratKeluar as $s) {
+            $bulan = Carbon::parse($s->tanggal_surat)->month - 1;
+            $keluar[$bulan]++;
+        }
+
+        return [
+            'chartMasuk'  => $masuk,
+            'chartKeluar' => $keluar,
+            'tahun'       => $year,
+        ];
+    }
+
+
+    /* ================= ADMIN ================= */
     protected function adminDashboard(User $user)
     {
-        return view('admin.dashboard', [
+        return view('admin.dashboard', array_merge([
             'jumlahUser'        => User::count(),
             'jumlahSuratMasuk'  => Surat::whereNotNull('unit_tujuan_id')->count(),
             'jumlahSuratKeluar' => Surat::whereNotNull('pembuat_id')->count(),
-            'jumlahDisposisi'   => SuratDisposisi::count(),
-            'jumlahTemplateSurat' => TemplateSurat::count(),
-        ]);
+        ], $this->analyticsSurat(
+                fn ($q) => $q->whereNotNull('unit_tujuan_id'),
+                fn ($q) => $q->whereNotNull('pembuat_id')
+            )
+            ));
     }
 
-
+    /* ================= PIMPINAN ================= */
     protected function pimpinanDashboard(User $user)
     {
-        if (!$user->unit_id) {
-            abort(500, 'Pimpinan tidak memiliki unit.');
-        }
+        abort_if(!$user->unit_id, 500);
 
-        $jumlahSuratMasuk = Surat::where('unit_tujuan_id', $user->unit_id)->count();
-
-        $jumlahDisposisi = SuratDisposisi::whereHas('surat', function ($q) use ($user) {
-            $q->where('unit_tujuan_id', $user->unit_id);
-        })->count();
-
-        return view('pimpinan.dashboard', [
-            'jumlahSuratMasuk'  => $jumlahSuratMasuk,
-            'jumlahSuratKeluar' => 0, // pimpinan tidak bikin surat
-            'jumlahDisposisi'   => $jumlahDisposisi,
-        ]);
+        return view('pimpinan.dashboard', array_merge([
+            'jumlahSuratMasuk'  => Surat::where('unit_tujuan_id', $user->unit_id)->count(),
+            'jumlahSuratKeluar' => 0,
+        ], $this->analyticsSurat(
+            fn ($q) => $q->where('unit_tujuan_id', $user->unit_id),
+            fn ($q) => $q->whereRaw('0 = 1') // tidak ada surat keluar
+        )
+        ));
     }
 
-
+    /* ================= VERIFIKATOR ================= */
     protected function verifikatorDashboard(User $user)
     {
-        if (!$user->jabatan_id) {
-            abort(500, 'Verifikator tidak memiliki jabatan.');
-        }
+        abort_if(!$user->jabatan_id, 500);
 
-        $jumlahSuratMasuk = Surat::whereHas('verifikasi', function ($q) use ($user) {
-            $q->where('jabatan_id', $user->jabatan_id)
-            ->whereIn('status', ['menunggu', 'diproses']);
-        })->count();
-
-        $jumlahSuratSelesai = Surat::whereHas('verifikasi', function ($q) use ($user) {
-            $q->where('jabatan_id', $user->jabatan_id)
-            ->whereIn('status', ['diterima', 'ditolak', 'ditandatangani']);
-        })->count();
-
-        return view('verifikator.dashboard', [
-            'jumlahSuratMasuk'  => $jumlahSuratMasuk,
+        return view('verifikator.dashboard', array_merge([
+            'jumlahSuratMasuk' => Surat::whereHas('verifikasi', function ($q) use ($user) {
+                $q->where('jabatan_id', $user->jabatan_id);
+            })->count(),
             'jumlahSuratKeluar' => 0,
-            'jumlahDisposisi'   => $jumlahSuratSelesai,
-        ]);
+        ], $this->analyticsSurat(
+            fn ($q) => $q->whereHas('verifikasi', fn ($v) =>
+                $v->where('jabatan_id', $user->jabatan_id)
+            ),
+            fn ($q) => $q->whereRaw('0 = 1')
+        )
+        ));
     }
 
+    /* ================= SEKRETARIS ================= */
     protected function sekretarisDashboard(User $user)
     {
-        if (!$user->unit_id) {
-            abort(500, 'Sekretaris Direktur tidak memiliki unit.');
-        }
+        abort_if(!$user->unit_id, 500);
 
-        $jumlahSuratMasuk = Surat::where('unit_tujuan_id', $user->unit_id)->count();
-
-        $jumlahSuratKeluar = Surat::where('unit_asal_id', $user->unit_id)->count();
-
-        $jumlahDisposisi = SuratDisposisi::whereHas('surat', function ($q) use ($user) {
-            $q->where('unit_tujuan_id', $user->unit_id);
-        })->count();
-
-        return view('sekretaris-direktur.dashboard', [
-            'jumlahSuratMasuk'  => $jumlahSuratMasuk,
-            'jumlahSuratKeluar' => $jumlahSuratKeluar,
-            'jumlahDisposisi'   => $jumlahDisposisi,
-        ]);
+        return view('sekretaris-direktur.dashboard', array_merge([
+            'jumlahSuratMasuk'  => Surat::where('unit_tujuan_id', $user->unit_id)->count(),
+            'jumlahSuratKeluar' => Surat::where('unit_asal_id', $user->unit_id)->count(),
+        ], $this->analyticsSurat(
+            fn ($q) => $q->where('unit_tujuan_id', $user->unit_id),
+            fn ($q) => $q->where('unit_asal_id', $user->unit_id)
+        )
+        ));
     }
 
-
+    /* ================= PEMBUAT SURAT ================= */
     protected function pembuatSuratDashboard(User $user)
     {
-        $jumlahSuratKeluar = Surat::where('pembuat_id', $user->id)->count();
+        abort_if(!$user->jabatan_id, 500);
 
-        $jumlahSuratMasuk = Surat::where('unit_tujuan_id', $user->unit_id)
-            ->where('pembuat_id', '!=', $user->id)
+        $jumlahDisposisi = SuratDisposisi::where('ke_jabatan_id', $user->jabatan_id)
+            ->where('status', 'pending')
             ->count();
 
-        $jumlahDisposisi = SuratDisposisi::whereHas('surat', function ($q) use ($user) {
-            $q->where('unit_tujuan_id', $user->unit_id);
-        })->count();
-
-        return view('pembuat-surat.dashboard', [
-            'jumlahSuratMasuk'  => $jumlahSuratMasuk,
-            'jumlahSuratKeluar' => $jumlahSuratKeluar,
+        return view('pembuat-surat.dashboard', array_merge([
+            'jumlahSuratMasuk'  => Surat::where('unit_tujuan_id', $user->unit_id)->count(),
+            'jumlahSuratKeluar' => Surat::where('pembuat_id', $user->id)->count(),
             'jumlahDisposisi'   => $jumlahDisposisi,
-        ]);
+        ], $this->analyticsSurat(
+            fn ($q) => $q->where('unit_tujuan_id', $user->unit_id)
+                        ->where('pembuat_id', '!=', $user->id),
+            fn ($q) => $q->where('pembuat_id', $user->id)
+        )));
     }
-
 
 }

@@ -26,27 +26,25 @@ class AlurVerifikasiPresenter
                 // =========================
                 // PRIORITAS STATUS STEP
                 // =========================
-                if ($step->status === 'disposisi') {
-                    $state = 'disposisi';
-
-                } elseif ($step->status === 'direvisi') {
-                    $state = 'direvisi';
-
-                } elseif ($step->status === 'ditolak') {
-                    $state = 'ditolak';
-
-                } elseif (in_array($step->status, ['diterima', 'ditandatangani', 'selesai'])) {
-                    $state = 'done';
-
-                } elseif (
-                    $step->status === 'pending'
-                    && $step->urutan === $surat->step_aktif
+                if (
+                    $step->status === 'disposisi'
+                    && $surat->status === 'disposisi'
                 ) {
+                    $state = 'disposisi';
+                }
+                elseif ($step->status === 'pending' && $step->urutan === $surat->step_aktif) {
                     $state = 'active';
-
-                } else {
+                }
+                elseif (in_array($step->status, ['selesai', 'ditandatangani'])) {
+                    $state = 'done';
+                }
+                elseif ($step->status === 'direvisi') {
+                    $state = 'direvisi';
+                }
+                else {
                     $state = 'waiting';
                 }
+
 
                 return [
                     'urutan'     => $step->urutan,

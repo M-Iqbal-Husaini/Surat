@@ -84,6 +84,10 @@ class SuratMasukController extends Controller
         $canReject  = $isMyTurn;
         $canDispose = $isMyTurn;
 
+        $disposisiAktif = $surat->disposisiAktif;
+
+        $jabatanTujuan = Jabatan::orderBy('nama_jabatan')->get();
+
         return view(
             'sekretaris-direktur.surat-masuk.show',
             compact(
@@ -94,7 +98,9 @@ class SuratMasukController extends Controller
                 'canApprove',
                 'canRevise',
                 'canReject',
-                'canDispose'
+                'canDispose',
+                'disposisiAktif',
+                'jabatanTujuan'
             )
         )->with([
             'unitTujuan' => Unit::where('jenis_unit', 'unit')

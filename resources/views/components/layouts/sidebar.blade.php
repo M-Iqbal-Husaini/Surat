@@ -153,24 +153,27 @@
 
     /*
     |--------------------------------------------------------------------------
-    | DISPOSISI — KHUSUS NON ADMIN (INI INTINYA)
+    | DISPOSISI — HANYA PEMBUAT & VERIFIKATOR
     |--------------------------------------------------------------------------
     */
-    if (!$isAdmin) {
+    if (
+        !$isAdmin &&
+        auth()->check() &&
+        auth()->user()->hasAnyRole(['pembuat_surat', 'verifikator'])
+    ) {
         $menus[] = [
             'type'   => 'link',
             'label'  => 'Disposisi',
             'routes' => [
                 'pembuat-surat.disposisi.index',
-                'sekretaris-direktur.disposisi.index',
                 'verifikator.disposisi.index',
-                'pimpinan.disposisi.index',
             ],
             'active' => '*.disposisi.*',
             'icon'   => 'list',
             'can'    => 'view disposisi',
         ];
     }
+
 
     /*
     |--------------------------------------------------------------------------

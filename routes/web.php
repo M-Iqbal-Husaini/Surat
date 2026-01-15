@@ -121,6 +121,24 @@ Route::middleware([
                 ->name('surat-masuk.index')
                 ->middleware('permission:manage surat masuk');
 
+            Route::get('/surat-masuk', [AdminSuratMasukController::class, 'index'])
+                ->name('surat-masuk.index')
+                ->middleware('permission:view surat masuk');
+
+            Route::get('/surat-keluar', [AdminSuratKeluarController::class, 'index'])
+                ->name('surat-keluar.index')
+                ->middleware('permission:view surat keluar');
+
+            Route::get('/surat-masuk/{surat}', [AdminSuratMasukController::class, 'show'])
+                ->name('surat-masuk.show')
+                ->middleware('permission:view surat masuk');
+
+            Route::get('/surat-keluar/{surat}', [AdminSuratKeluarController::class, 'show'])
+                ->name('surat-keluar.show')
+                ->middleware('permission:view surat keluar');
+
+
+
             Route::prefix('users')
                 ->name('users.')
                 ->middleware('permission:manage users')

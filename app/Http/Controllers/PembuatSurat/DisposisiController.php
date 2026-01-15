@@ -24,8 +24,20 @@ class DisposisiController extends Controller
                 'surat.unitAsal',
             ])
             ->where('ke_jabatan_id', $jabatanId)
-            ->where('status', 'pending')
-            ->orderByDesc('created_at')
+            ->where(function ($q) {
+                $q->where('status', 'pending')
+                ->orWhere(function ($x) {
+                    $x->where('status', 'selesai')
+                        ->whereDate('updated_at', now()->toDateString());
+                });
+            })
+            ->orderByRaw("
+                CASE 
+                    WHEN status = 'pending' THEN 1
+                    ELSE 2
+                END
+            ")
+            ->orderByDesc('updated_at')
             ->get();
 
         return view(
@@ -33,6 +45,7 @@ class DisposisiController extends Controller
             compact('disposisi')
         );
     }
+
 
     /**
      * ==================================================

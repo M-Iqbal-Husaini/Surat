@@ -71,7 +71,7 @@
                                 <div>
                                     <span class="text-slate-500">Perihal</span>
                                     <p class="font-medium text-slate-800">
-                                        {{ $surat->data_json['perihal'] ?? '-' }}
+                                        {{ $surat->perihal }}
                                     </p>
                                 </div>
 
