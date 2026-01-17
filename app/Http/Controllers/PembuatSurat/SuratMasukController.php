@@ -19,71 +19,63 @@ class SuratMasukController extends Controller
     {
         $user = Auth::user();
 
-        $suratVerifikasi = Surat::whereHas('verifikasi', function ($q) use ($user) {
-            $q->where('jabatan_id', $user->jabatan_id)
-            ->where('status', 'pending');
-        });
+        abort_if(!$user->jabatan_id || !$user->unit_id, 403);
 
-        $suratDisposisi = Surat::whereHas('disposisiAktif', function ($q) use ($user) {
-            $q->where('ke_jabatan_id', $user->jabatan_id)
-            ->where('status', 'pending');
-        });
-
-        $suratMasuk = $suratVerifikasi
-            ->union($suratDisposisi)
-            ->with(['template', 'unitAsal', 'pembuat'])
-            ->orderByDesc('tanggal_surat')
-            ->get();
-
-        $suratIds = SuratVerifikasi::query()
-            ->where('jabatan_id', $user->jabatan_id)
-            ->pluck('surat_id')
-            ->unique();
-
-        $suratList = Surat::with([
+        $suratMasuk = Surat::with([
                 'template',
                 'unitAsal',
                 'verifikasi',
             ])
-            ->whereIn('id', $suratIds)
+            // ⬇️ INI KUNCI UTAMA
+            ->where('unit_tujuan_id', $user->unit_id)
+
+            // ⬇️ Surat bukan buatan sendiri
+            ->where('pembuat_id', '!=', $user->id)
+
+            // ⬇️ Status yang masih relevan untuk ditampilkan
+            ->whereIn('status', [
+                'diajukan',
+                'diproses',
+                'menunggu',
+                'disposisi',
+                'selesai',
+                'final',
+            ])
             ->orderByDesc('tanggal_surat')
-            ->get();
+            ->get()
+            ->map(function (Surat $surat) use ($user) {
 
-        $suratMasuk = $suratList->map(function (Surat $surat) use ($user) {
-            $stepSaya = $surat->verifikasi
-                ->firstWhere('jabatan_id', $user->jabatan_id);
+                $stepSaya = $surat->verifikasi
+                    ->firstWhere('jabatan_id', $user->jabatan_id);
 
-            if ($surat->status === 'final') {
-                $label = 'Final';
-                $badge = 'bg-green-100 text-green-700';
-            } elseif ($surat->status === 'ditolak') {
-                $label = 'Ditolak';
-                $badge = 'bg-red-100 text-red-700';
-            } elseif (
-                $stepSaya &&
-                $stepSaya->status === 'pending' &&
-                $stepSaya->urutan === $surat->step_aktif
-            ) {
-                $label = 'Perlu Tindakan';
-                $badge = 'bg-yellow-100 text-yellow-800';
-            } elseif ($surat->status === 'disposisi') {
-                $label = 'Disposisi';
-                $badge = 'bg-purple-100 text-purple-700';
-            } else {
-                $label = 'Diproses';
-                $badge = 'bg-blue-100 text-blue-700';
-            }
+                if ($surat->status === 'final') {
+                    $label = 'Final';
+                    $badge = 'bg-green-100 text-green-700';
+                } elseif ($surat->status === 'ditolak') {
+                    $label = 'Ditolak';
+                    $badge = 'bg-red-100 text-red-700';
+                } elseif ($surat->status === 'disposisi') {
+                    $label = 'Disposisi';
+                    $badge = 'bg-purple-100 text-purple-700';
+                } elseif ($surat->status === 'diajukan') {
+                    $label = 'Diajukan';
+                    $badge = 'bg-blue-100 text-blue-700';
+                } else {
+                    $label = 'Diproses';
+                    $badge = 'bg-yellow-100 text-yellow-800';
+                }
 
-            return [
-                'model'       => $surat,
-                'statusLabel' => $label,
-                'statusBadge' => $badge,
-                'needAction'  =>
-                    $stepSaya &&
-                    $stepSaya->status === 'pending' &&
-                    $stepSaya->urutan === $surat->step_aktif,
-            ];
-        });
+                return [
+                    'model'       => $surat,
+                    'statusLabel' => $label,
+                    'statusBadge' => $badge,
+                    'needAction'  => in_array($surat->status, [
+                        'diajukan',
+                        'diproses',
+                        'disposisi',
+                    ]),
+                ];
+            });
 
         return view(
             'pembuat-surat.surat-masuk.index',
