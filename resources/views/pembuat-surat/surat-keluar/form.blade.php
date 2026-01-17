@@ -106,12 +106,33 @@
                                     @endif
                                 </label>
 
-                                <input
-                                    type="text"
-                                    name="data[{{ $field->field_key }}]"
-                                    value="{{ old('data.' . $field->field_key) }}"
-                                    class="w-full rounded-lg border-slate-300"
-                                    {{ $field->required ? 'required' : '' }}>
+                                @php
+                                    $inputType = match ($field->type) {
+                                        'date'     => 'date',
+                                        'number'   => 'number',
+                                        'text'     => 'text',
+                                        'textarea' => 'textarea',
+                                        default    => 'text',
+                                    };
+                                @endphp
+
+                                @if ($inputType === 'textarea')
+                                    <textarea
+                                        name="data[{{ $field->field_key }}]"
+                                        rows="4"
+                                        class="w-full rounded-lg border-slate-300
+                                            focus:border-blue-500 focus:ring-blue-500"
+                                        {{ $field->required ? 'required' : '' }}
+                                    >{{ old('data.' . $field->field_key) }}</textarea>
+                                @else
+                                    <input
+                                        type="{{ $inputType }}"
+                                        name="data[{{ $field->field_key }}]"
+                                        value="{{ old('data.' . $field->field_key) }}"
+                                        class="w-full rounded-lg border-slate-300
+                                            focus:border-blue-500 focus:ring-blue-500"
+                                        {{ $field->required ? 'required' : '' }}>
+                                @endif
                             </div>
                         @endforeach
 
