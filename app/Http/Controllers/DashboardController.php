@@ -30,28 +30,46 @@ class DashboardController extends Controller
      * ========================================================= */
     protected function analyticsSurat(callable $queryMasuk, callable $queryKeluar)
     {
-        $tahun  = now()->year;
+        $tahun = now()->year;
+
+        $labels = [
+            'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+            'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+        ];
+
         $masuk  = array_fill(0, 12, 0);
         $keluar = array_fill(0, 12, 0);
 
         $queryMasuk(
             Surat::whereYear('tanggal_surat', $tahun)
         )->get(['tanggal_surat'])->each(function ($s) use (&$masuk) {
-            $masuk[Carbon::parse($s->tanggal_surat)->month - 1]++;
+            $index = Carbon::parse($s->tanggal_surat)->month - 1;
+            $masuk[$index]++;
         });
 
         $queryKeluar(
             Surat::whereYear('tanggal_surat', $tahun)
         )->get(['tanggal_surat'])->each(function ($s) use (&$keluar) {
-            $keluar[Carbon::parse($s->tanggal_surat)->month - 1]++;
+            $index = Carbon::parse($s->tanggal_surat)->month - 1;
+            $keluar[$index]++;
         });
 
         return [
-            'chartMasuk'  => $masuk,
-            'chartKeluar' => $keluar,
-            'tahun'       => $tahun,
+            'chartLabels' => $labels,
+            'chartData'   => [
+                [
+                    'label' => 'Surat Masuk',
+                    'data'  => $masuk,
+                ],
+                [
+                    'label' => 'Surat Keluar',
+                    'data'  => $keluar,
+                ],
+            ],
+            'tahun' => $tahun,
         ];
     }
+
 
     /* =========================================================
      * ADMIN (GLOBAL)
@@ -73,16 +91,33 @@ class DashboardController extends Controller
      * ========================================================= */
     protected function pimpinanDashboard(User $user)
     {
-        abort_if(!$user->unit_id, 500);
+        abort_if(!$user->unit_id || !$user->jabatan_id, 500);
+
+        $jumlahSuratMasuk = Surat::where('unit_tujuan_id', $user->unit_id)->count();
+
+        $jumlahSuratKeluar = Surat::where('unit_tujuan_id', $user->unit_id)
+            ->where('status', '!=', 'ditolak')
+            ->whereHas('verifikasi', fn ($q) =>
+                $q->where('jabatan_id', $user->jabatan_id)
+            )
+            ->whereDoesntHave('verifikasi', fn ($v) =>
+                $v->where('jabatan_id', $user->jabatan_id)
+                ->whereColumn('urutan', 'surat.step_aktif')
+                ->where('status', 'pending')
+            )
+            ->count();
 
         return view('pimpinan.dashboard', array_merge([
-            'jumlahSuratMasuk'  => Surat::where('unit_tujuan_id', $user->unit_id)->count(),
-            'jumlahSuratKeluar' => 0,
+            'jumlahSuratMasuk'  => $jumlahSuratMasuk,
+            'jumlahSuratKeluar' => $jumlahSuratKeluar,
         ], $this->analyticsSurat(
             fn ($q) => $q->where('unit_tujuan_id', $user->unit_id),
-            fn ($q) => $q->whereRaw('1 = 0')
+            fn ($q) => $q
+                ->where('unit_tujuan_id', $user->unit_id)
+                ->where('status', '!=', 'ditolak')
         )));
     }
+
 
     /* =========================================================
      * VERIFIKATOR (UNIT + JABATAN)
@@ -91,38 +126,75 @@ class DashboardController extends Controller
     {
         abort_if(!$user->unit_id || !$user->jabatan_id, 500);
 
+        $jumlahSuratMasuk = Surat::where('unit_tujuan_id', $user->unit_id)
+            ->whereHas('verifikasi', fn ($q) =>
+                $q->where('jabatan_id', $user->jabatan_id)
+            )
+            ->count();
+
+        $jumlahSuratKeluar = Surat::where('unit_tujuan_id', $user->unit_id)
+            ->where('status', '!=', 'ditolak')
+            ->whereHas('verifikasi', fn ($q) =>
+                $q->where('jabatan_id', $user->jabatan_id)
+            )
+            ->whereDoesntHave('verifikasi', fn ($v) =>
+                $v->where('jabatan_id', $user->jabatan_id)
+                ->whereColumn('urutan', 'surat.step_aktif')
+                ->where('status', 'pending')
+            )
+            ->count();
+
         return view('verifikator.dashboard', array_merge([
-            'jumlahSuratMasuk' => Surat::where('unit_tujuan_id', $user->unit_id)
-                ->whereHas('verifikasi', fn ($q) =>
-                    $q->where('jabatan_id', $user->jabatan_id)
-                )
-                ->count(),
-            'jumlahSuratKeluar' => 0,
+            'jumlahSuratMasuk'  => $jumlahSuratMasuk,
+            'jumlahSuratKeluar' => $jumlahSuratKeluar,
         ], $this->analyticsSurat(
             fn ($q) => $q
                 ->where('unit_tujuan_id', $user->unit_id)
                 ->whereHas('verifikasi', fn ($v) =>
                     $v->where('jabatan_id', $user->jabatan_id)
                 ),
-            fn ($q) => $q->whereRaw('1 = 0')
+            fn ($q) => $q
+                ->where('unit_tujuan_id', $user->unit_id)
+                ->where('status', '!=', 'ditolak')
+                ->whereHas('verifikasi', fn ($v) =>
+                    $v->where('jabatan_id', $user->jabatan_id)
+                )
         )));
     }
+
 
     /* =========================================================
      * SEKRETARIS DIREKTUR
      * ========================================================= */
     protected function sekretarisDashboard(User $user)
     {
-        abort_if(!$user->unit_id, 500);
+        abort_if(!$user->unit_id || !$user->jabatan_id, 500);
+
+        $jumlahSuratMasuk = Surat::where('unit_tujuan_id', $user->unit_id)->count();
+
+        $jumlahSuratKeluar = Surat::where('unit_tujuan_id', $user->unit_id)
+            ->where('status', '!=', 'ditolak')
+            ->whereHas('verifikasi', fn ($q) =>
+                $q->where('jabatan_id', $user->jabatan_id)
+            )
+            ->whereDoesntHave('verifikasi', fn ($v) =>
+                $v->where('jabatan_id', $user->jabatan_id)
+                ->whereColumn('urutan', 'surat.step_aktif')
+                ->where('status', 'pending')
+            )
+            ->count();
 
         return view('sekretaris-direktur.dashboard', array_merge([
-            'jumlahSuratMasuk'  => Surat::where('unit_tujuan_id', $user->unit_id)->count(),
-            'jumlahSuratKeluar' => Surat::where('unit_asal_id', $user->unit_id)->count(),
+            'jumlahSuratMasuk'  => $jumlahSuratMasuk,
+            'jumlahSuratKeluar' => $jumlahSuratKeluar,
         ], $this->analyticsSurat(
             fn ($q) => $q->where('unit_tujuan_id', $user->unit_id),
-            fn ($q) => $q->where('unit_asal_id', $user->unit_id)
+            fn ($q) => $q
+                ->where('unit_tujuan_id', $user->unit_id)
+                ->where('status', '!=', 'ditolak')
         )));
     }
+
 
     /* =========================================================
      * PEMBUAT SURAT (UNIT TUJUAN = SURAT MASUK)

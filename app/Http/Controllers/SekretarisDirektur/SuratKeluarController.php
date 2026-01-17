@@ -21,30 +21,34 @@ class SuratKeluarController extends Controller
         $user = Auth::user();
         $jabatan = $user->jabatan;
 
-        abort_if($jabatan->is_pimpinan, 403);
+        abort_if(!$jabatan || $jabatan->is_pimpinan || !$user->unit_id, 403);
 
         $suratKeluar = Surat::with([
                 'template',
                 'unitAsal',
                 'unitTujuan',
+                'verifikasi',
             ])
+
+            ->where('status', '!=', 'ditolak')
+
+            // ⬇️ kunci unit sekkdir
+            ->where('unit_tujuan_id', $user->unit_id)
+
+            // ⬇️ pernah diproses oleh sekkdir
             ->whereHas('verifikasi', function ($q) use ($jabatan) {
-                $q->where('jabatan_id', $jabatan->id)
-                  ->whereIn('status', [
-                      'selesai',
-                      'diterima',
-                      'diteruskan',
-                      'ditolak',
-                      'disposisi',
-                  ]);
+                $q->where('jabatan_id', $jabatan->id);
             })
-            ->whereIn('status', [
-                'final',
-                'ditolak',
-                'disposisi',
-                'diterima',
-                'diproses',
-            ])
+
+            // ⬇️ sudah keluar dari step sekkdir
+            ->where(function ($q) use ($jabatan) {
+                $q->whereDoesntHave('verifikasi', function ($v) use ($jabatan) {
+                    $v->where('jabatan_id', $jabatan->id)
+                    ->whereColumn('urutan', 'surat.step_aktif')
+                    ->where('status', 'pending');
+                });
+            })
+
             ->orderByDesc('tanggal_surat')
             ->get();
 
@@ -53,6 +57,7 @@ class SuratKeluarController extends Controller
             compact('suratKeluar')
         );
     }
+
 
     /**
      * =================================

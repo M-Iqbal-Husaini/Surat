@@ -18,30 +18,49 @@ class SuratMasukController extends Controller
      * ===================================================== */
     public function index()
     {
-        $user = auth()->user();
+        $user = Auth::user();
+        $jabatan = $user->jabatan;
 
-        // 1. Surat workflow (verifikasi)
-        $workflow = Surat::query()
-            ->whereHas('verifikasi', function ($q) use ($user) {
-                $q->where('jabatan_id', $user->jabatan_id)
-                ->where('status', 'pending');
-            });
+        abort_if(
+            !$jabatan ||
+            $jabatan->is_pimpinan ||
+            !$user->unit_id,
+            403
+        );
 
-        // 2. Surat disposisi
-        $disposisi = Surat::query()
-            ->whereHas('disposisiAktif', function ($q) use ($user) {
-                $q->where('ke_jabatan_id', $user->jabatan_id);
-            });
+        $suratMasuk = Surat::with([
+                'template',
+                'unitAsal',
+                'pembuat',
+                'verifikasi',
+                'disposisi',
+            ])
+            // ⬇️ kunci ke unit sekkdir
+            ->where('unit_tujuan_id', $user->unit_id)
 
-        // 3. Gabung
-        $suratMasuk = $workflow
-            ->union($disposisi)
-            ->with(['template', 'unitAsal', 'pembuat'])
+            // ⬇️ pernah masuk ke sekkdir
+            ->where(function ($q) use ($jabatan) {
+
+                // lewat verifikasi
+                $q->whereHas('verifikasi', function ($v) use ($jabatan) {
+                    $v->where('jabatan_id', $jabatan->id);
+                })
+
+                // atau lewat disposisi
+                ->orWhereHas('disposisi', function ($d) use ($jabatan) {
+                    $d->where('ke_jabatan_id', $jabatan->id);
+                });
+            })
+
             ->orderByDesc('tanggal_surat')
             ->get();
 
-        return view('sekretaris-direktur.surat-masuk.index', compact('suratMasuk'));
+        return view(
+            'sekretaris-direktur.surat-masuk.index',
+            compact('suratMasuk')
+        );
     }
+
 
 
     /* =====================================================

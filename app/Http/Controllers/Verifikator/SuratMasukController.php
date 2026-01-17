@@ -15,49 +15,28 @@ class SuratMasukController extends Controller
     {
         $user = Auth::user();
 
-        /**
-         * ===============================
-         * WORKFLOW VERIFIKASI
-         * ===============================
-         * - pending           → perlu setujui / tolak
-         * - selesai + perlu_ttd → perlu TTD
-         */
-        $workflow = Surat::query()
-            ->whereHas('verifikasi', function ($q) use ($user) {
-                $q->where('jabatan_id', $user->jabatan_id)
-                ->whereColumn('urutan', 'surat.step_aktif')
-                ->where(function ($q) {
-                    $q->where('status', 'pending')
-                        ->orWhere(function ($q) {
-                            $q->where('status', 'selesai')
-                            ->where('perlu_ttd', 1);
-                        });
-                });
-            });
+        abort_if(!$user->jabatan_id || !$user->unit_id, 403);
 
-        /**
-         * ===============================
-         * DISPOSISI AKTIF KE SAYA
-         * ===============================
-         */
-        $disposisi = Surat::query()
-            ->whereHas('disposisiAktif', function ($q) use ($user) {
-                $q->where('ke_jabatan_id', $user->jabatan_id)
-                ->where('status', 'pending');
-            });
-
-        /**
-         * ===============================
-         * UNION + LOAD RELATION
-         * ===============================
-         */
-        $suratMasuk = $workflow
-            ->union($disposisi)
-            ->with([
+        $suratMasuk = Surat::with([
                 'template',
                 'unitAsal',
                 'pembuat',
+                'verifikasi',
+                'disposisi',
             ])
+            ->where('unit_tujuan_id', $user->unit_id)
+            ->where(function ($q) use ($user) {
+
+                // Pernah diverifikasi oleh saya
+                $q->whereHas('verifikasi', function ($v) use ($user) {
+                    $v->where('jabatan_id', $user->jabatan_id);
+                })
+
+                // ATAU pernah didisposisikan ke saya
+                ->orWhereHas('disposisi', function ($d) use ($user) {
+                    $d->where('ke_jabatan_id', $user->jabatan_id);
+                });
+            })
             ->orderByDesc('tanggal_surat')
             ->get();
 

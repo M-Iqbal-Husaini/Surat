@@ -15,26 +15,29 @@ class SuratKeluarController extends Controller
     {
         $user = Auth::user();
 
-        $suratKeluar = Surat::query()
-            ->whereHas('verifikasi', function ($q) use ($user) {
-                $q->where('jabatan_id', $user->jabatan_id)
-                ->whereIn('status', [
-                    'pending',
-                    'selesai',
-                    'ditandatangani',
-                    'ditolak',
-                    'disposisi',
-                ]);
-            })
-            ->whereIn('surat.status', [
-                'diajukan',
-                'diproses',
-                'final',
-                'ditolak',
-                'disposisi',
+        abort_if(!$user->jabatan_id || !$user->unit_id, 403);
+
+        $suratKeluar = Surat::with([
+                'template',
+                'unitAsal',
+                'pembuat',
+                'verifikasi',
             ])
-            ->with(['template', 'unitAsal', 'pembuat'])
-            ->orderByDesc('surat.updated_at')
+            ->where('status', '!=', 'ditolak')
+
+            ->where('unit_tujuan_id', $user->unit_id)
+            ->whereHas('verifikasi', function ($q) use ($user) {
+                $q->where('jabatan_id', $user->jabatan_id);
+            })
+            // ⬇️ SUDAH LEWAT DARI STEP SAYA
+            ->where(function ($q) use ($user) {
+                $q->whereDoesntHave('verifikasi', function ($v) use ($user) {
+                    $v->where('jabatan_id', $user->jabatan_id)
+                    ->whereColumn('urutan', 'surat.step_aktif')
+                    ->where('status', 'pending');
+                });
+            })
+            ->orderByDesc('updated_at')
             ->get();
 
         return view(

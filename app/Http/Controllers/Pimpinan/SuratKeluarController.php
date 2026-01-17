@@ -18,38 +18,45 @@ class SuratKeluarController extends Controller
      */
     public function index()
     {
-        $user = Auth::user();
-        abort_if(!$user->jabatan->is_pimpinan, 403);
+    $user = Auth::user();
 
-        $suratKeluar = Surat::with([
-                'template',
-                'unitAsal',
-                'unitTujuan',
-            ])
-            ->whereHas('verifikasi', function ($q) use ($user) {
-                $q->where('jabatan_id', $user->jabatan_id)
-                  ->whereIn('status', [
-                      'diterima',
-                      'ditandatangani',
-                      'ditolak',
-                      'disposisi',
-                      'selesai',
-                  ]);
-            })
-            ->whereIn('status', [
-                'final',
-                'ditolak',
-                'disposisi',
-                'diterima',
-            ])
-            ->orderByDesc('tanggal_surat')
-            ->get();
+    abort_if(!$user->jabatan || !$user->jabatan->is_pimpinan || !$user->unit_id, 403);
 
-        return view(
-            'pimpinan.surat-keluar.index',
-            compact('suratKeluar')
-        );
+    $suratKeluar = Surat::with([
+            'template',
+            'unitAsal',
+            'unitTujuan',
+            'verifikasi',
+        ])
+
+        ->where('status', '!=', 'ditolak')
+
+        // ⬇️ Kunci unit pimpinan
+        ->where('unit_tujuan_id', $user->unit_id)
+
+        // ⬇️ Pernah diverifikasi oleh pimpinan
+        ->whereHas('verifikasi', function ($q) use ($user) {
+            $q->where('jabatan_id', $user->jabatan_id);
+        })
+
+        // ⬇️ Sudah bukan di step pimpinan lagi
+        ->where(function ($q) use ($user) {
+            $q->whereDoesntHave('verifikasi', function ($v) use ($user) {
+                $v->where('jabatan_id', $user->jabatan_id)
+                  ->whereColumn('urutan', 'surat.step_aktif')
+                  ->where('status', 'pending');
+            });
+        })
+
+        ->orderByDesc('tanggal_surat')
+        ->get();
+
+    return view(
+        'pimpinan.surat-keluar.index',
+        compact('suratKeluar')
+    );
     }
+
 
     /**
      * =================================

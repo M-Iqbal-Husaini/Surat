@@ -17,25 +17,37 @@ class SuratMasukController extends Controller
     {
         $user = Auth::user();
 
-        abort_if(!$user->jabatan || !$user->jabatan->is_pimpinan, 403);
+        abort_if(
+            !$user->jabatan ||
+            !$user->jabatan->is_pimpinan ||
+            !$user->unit_id,
+            403
+        );
 
-        $suratMasuk = Surat::query()
-            ->whereHas('verifikasi', function ($q) use ($user) {
-                $q->where('jabatan_id', $user->jabatan_id)
-                ->whereColumn('urutan', 'surat.step_aktif')
-                ->where(function ($q) {
-                    $q->where('status', 'pending') // perlu approve / tolak
-                        ->orWhere(function ($q) {
-                            $q->where('status', 'selesai')
-                            ->where('perlu_ttd', 1); // perlu TTD
-                        });
-                });
-            })
-            ->with([
+        $suratMasuk = Surat::with([
                 'template',
                 'unitAsal',
                 'pembuat',
+                'verifikasi',
+                'disposisi',
             ])
+            // ⬇️ kunci surat ke unit pimpinan
+            ->where('unit_tujuan_id', $user->unit_id)
+
+            // ⬇️ pernah masuk ke pimpinan (verifikasi atau disposisi)
+            ->where(function ($q) use ($user) {
+
+                // pernah diverifikasi pimpinan
+                $q->whereHas('verifikasi', function ($v) use ($user) {
+                    $v->where('jabatan_id', $user->jabatan_id);
+                })
+
+                // atau pernah didisposisikan ke pimpinan
+                ->orWhereHas('disposisi', function ($d) use ($user) {
+                    $d->where('ke_jabatan_id', $user->jabatan_id);
+                });
+            })
+
             ->orderByDesc('tanggal_surat')
             ->get();
 
@@ -44,6 +56,7 @@ class SuratMasukController extends Controller
             compact('suratMasuk')
         );
     }
+
 
 
     /* =====================================================

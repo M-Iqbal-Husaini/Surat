@@ -27,12 +27,13 @@
                 <x-layouts.topbar />
 
                 {{-- MAIN CONTENT --}}
-                <main class="flex-1 bg-slate-50 p-4 sm:p-6">
-                    <div class="w-full space-y-6">
-                        <h1 class="text-xl font-semibold text-gray-800">
-                            Dashboard
-                        </h1>
+                <main class="flex-1 p-4 sm:p-6 space-y-6">
 
+                    <h1 class="text-xl font-semibold text-slate-800">
+                        Dashboard
+                    </h1>
+
+                    {{-- STAT CARDS --}}
                         {{-- STAT CARDS --}}
                         <div class="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
                             {{-- Total Surat Masuk --}}
@@ -61,122 +62,29 @@
                                 "
                             />
 
-                            {{-- Total Disposisi --}}
-                            <x-layouts.stat-card
-                                title="Disposisi"
-                                :value="$jumlahDisposisi"
-                                color="bg-green-400"
-                                icon="
-                                    <svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' class='w-7 h-7'>
-                                    <path fill-rule='evenodd' d='M2.625 6.75a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0A.75.75 0 0 1 8.25 6h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75ZM2.625 12a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0ZM7.5 12a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12A.75.75 0 0 1 7.5 12Zm-4.875 5.25a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75Z' clip-rule='evenodd' />
-                                    </svg>
-                                "
-                            />
                         </div>
 
-                        {{-- ANALYTICS (MASIH SAMA DENGAN VERSI KITA BARUSAN) --}}
-                        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-                            
-                            {{-- Header Chart --}}
-                            <div class="flex justify-between items-start mb-6">
-                                <div>
-                                    <h2 class="text-sm font-bold text-slate-800">
-                                        Analytics Surat Tahun {{ $tahun }}
-                                    </h2>
-                                    <p class="text-xs text-slate-400 mt-1">
-                                        Monitoring volume surat masuk vs keluar
-                                    </p>
-                                </div>
-                                {{-- Badge Tahun --}}
-                                <span class="px-2 py-1 text-[10px] font-medium bg-slate-100 text-slate-600 rounded">
-                                    {{ $tahun }}
-                                </span>
+                    {{-- ANALYTICS --}}
+                    <div class="bg-white rounded-xl border shadow-sm p-6">
+
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h2 class="text-sm font-semibold text-slate-800">
+                                    Analytics Surat Tahun {{ $tahun }}
+                                </h2>
+                                <p class="text-xs text-slate-500 mt-1">
+                                    Perbandingan surat masuk dan surat keluar per bulan
+                                </p>
                             </div>
 
-                            @php
-                                $months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
-                                // Cari nilai tertinggi untuk skala chart (supaya bar tidak mentok atau terlalu pendek)
-                                // Jika data kosong semua, default max 1 agar tidak divide by zero
-                                $maxData = max(array_merge($chartMasuk, $chartKeluar));
-                                $maxValue = $maxData > 0 ? $maxData : 1;
-                            @endphp
+                            <span class="px-2 py-1 text-xs rounded bg-slate-100 text-slate-600">
+                                {{ $tahun }}
+                            </span>
+                        </div>
 
-                            {{-- Chart Area Wrapper --}}
-                            <div class="overflow-x-auto">
-                                <div class="min-w-[600px] sm:min-w-full">
-                                    
-                                    {{-- BAR CHART CONTAINER --}}
-                                    {{-- h-64 menetapkan tinggi area chart --}}
-                                    <div class="flex items-end h-64 gap-3 sm:gap-4 border-b border-slate-100 pb-2">
-                                        
-                                        @foreach($months as $i => $bulan)
-                                            @php
-                                                // Hitung persentase tinggi bar
-                                                $percentMasuk  = ($chartMasuk[$i] / $maxValue) * 100;
-                                                $percentKeluar = ($chartKeluar[$i] / $maxValue) * 100;
-                                            @endphp
-
-                                            {{-- KOLOM PER BULAN --}}
-                                            {{-- group: untuk trigger hover effect --}}
-                                            <div class="flex-1 flex flex-col justify-end h-full group relative">
-                                                
-                                                {{-- Tooltip (Akan muncul saat mouse hover di kolom bulan ini) --}}
-                                                <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-max">
-                                                    <div class="bg-slate-800 text-white text-[10px] rounded py-1 px-2 shadow-lg">
-                                                        <div class="font-semibold mb-1">{{ $bulan }}</div>
-                                                        <div class="flex items-center gap-2">
-                                                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                            <span>M: {{ $chartMasuk[$i] }}</span>
-                                                        </div>
-                                                        <div class="flex items-center gap-2">
-                                                            <span class="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
-                                                            <span>K: {{ $chartKeluar[$i] }}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {{-- Area Bar (Side by Side) --}}
-                                                <div class="flex items-end justify-center gap-[2px] w-full h-full">
-                                                    
-                                                    {{-- Bar Surat Masuk (Blue) --}}
-                                                    <div class="w-full bg-blue-100 rounded-t-sm relative transition-all duration-500 ease-out"
-                                                        style="height: {{ $percentMasuk }}%">
-                                                        {{-- Inner Color (untuk efek visual lebih bagus) --}}
-                                                        <div class="absolute bottom-0 w-full bg-blue-500 rounded-t-sm" style="height: 100%"></div>
-                                                    </div>
-
-                                                    {{-- Bar Surat Keluar (Yellow) --}}
-                                                    <div class="w-full bg-yellow-100 rounded-t-sm relative transition-all duration-500 ease-out"
-                                                        style="height: {{ $percentKeluar }}%">
-                                                        <div class="absolute bottom-0 w-full bg-yellow-400 rounded-t-sm" style="height: 100%"></div>
-                                                    </div>
-                                                </div>
-
-                                                {{-- Label Bulan --}}
-                                                <div class="mt-2 text-center">
-                                                    <span class="text-[10px] text-slate-400 font-medium group-hover:text-slate-600">
-                                                        {{ $bulan }}
-                                                    </span>
-                                                </div>
-
-                                            </div>
-                                        @endforeach
-                                    </div>
-
-                                    {{-- Legend --}}
-                                    <div class="flex justify-center gap-6 mt-6">
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                                            <span class="text-xs text-slate-600">Surat Masuk</span>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
-                                            <span class="text-xs text-slate-600">Surat Keluar</span>
-                                        </div>
-                                    </div>
-
-                                </div>
-                            </div>
+                        {{-- LINE CHART --}}
+                        <div class="relative h-[340px] w-[1250px] w-full overflow-hidden">
+                            <canvas id="suratLineChart" class="w-full"></canvas>
                         </div>
 
                     </div>
@@ -184,4 +92,77 @@
             </div>
         </div>
     </div>
+
+    {{-- CHART.JS --}}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+    const ctx = document.getElementById('suratLineChart');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: @json($chartLabels),
+            datasets: [
+                {
+                    label: '{{ $chartData[0]['label'] }}',
+                    data: @json($chartData[0]['data']),
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
+                },
+                {
+                    label: '{{ $chartData[1]['label'] }}',
+                    data: @json($chartData[1]['data']),
+                    borderWidth: 2,
+                    tension: 0.35,
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            layout: {
+                padding: { left: 0, right: 0, top: 4, bottom: 0 }
+            },
+
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 10,
+                        padding: 10,
+                        font: { size: 11 }
+                    }
+                }
+            },
+
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0,
+                        font: { size: 10 }
+                    }
+                },
+                x: {
+                    offset: false,
+                    ticks: {
+                        autoSkip: true,
+                        maxTicksLimit: 12,
+                        maxRotation: 0,
+                        padding: 4,
+                        font: { size: 10 }
+                    },
+                    grid: { display: false }
+                }
+            }
+        }
+
+    });
+    </script>
 </x-app-layout>
